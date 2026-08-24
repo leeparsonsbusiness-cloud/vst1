@@ -40,6 +40,7 @@ void KeshaZeddSynthAudioProcessor::prepareToPlay(double sampleRate, int samplesP
 
     postFX.prepare(spec);
     autoMaster.prepare(spec);
+    expandedFX.prepare(spec);
     zeddifyEngine.setSampleRate(sampleRate);
 }
 
@@ -103,6 +104,19 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     int chordType = static_cast<int>(apvts.getRawParameterValue("chord_type")->load());
     int playMode = static_cast<int>(apvts.getRawParameterValue("play_mode")->load());
     float glideTime = apvts.getRawParameterValue("glide_time")->load();
+
+    int arpMode = static_cast<int>(apvts.getRawParameterValue("arp_mode")->load());
+    int arpRate = static_cast<int>(apvts.getRawParameterValue("arp_rate")->load());
+    int arpOctaves = static_cast<int>(apvts.getRawParameterValue("arp_octaves")->load());
+    float arpSwing = apvts.getRawParameterValue("arp_swing")->load();
+    float arpGate = apvts.getRawParameterValue("arp_gate")->load();
+
+    arpeggiator.setMode(arpMode);
+    arpeggiator.setRate(arpRate);
+    arpeggiator.setOctaves(arpOctaves);
+    arpeggiator.setSwing(arpSwing);
+    arpeggiator.setGate(arpGate);
+    arpeggiator.processMidiBlock(midiMessages, getSampleRate(), bpm, buffer.getNumSamples());
 
     zeddifyEngine.setBpm(bpm);
     zeddifyEngine.processMidiBlock(midiMessages, zeddifyActive, buffer.getNumSamples());
@@ -278,14 +292,23 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
             buffer.addFrom(1, 0, tempBuffer, 2, 0, numSamples);
     }
 
-    // 6. Auto-Master One-Click Polish Stage (Smart Auto-Gain, 3-Band OTT, Sub-Lock, 4x Oversampled Soft-Clipper)
+    // 6. Expanded FX Suite (Bitcrusher, Wavefolder, Phaser/Flanger)
+    expandedFX.process(buffer, apvts);
+
+    // 7. Auto-Master One-Click Polish Stage (Smart Auto-Gain, 3-Band OTT, Sub-Lock, 4x Oversampled Soft-Clipper)
     autoMaster.process(buffer, autoMasterActive, autoMasterIntensity);
 
-    // 7. Master Volume scaling
+    // 8. Master Volume scaling
     float masterVol = apvts.getRawParameterValue("master_vol")->load();
     buffer.applyGain(masterVol);
 
-    // 8. Track Peak Levels for UI VU Meter
+    // 9. Stream to Visualizer FFT & Scope
+    visualizer.pushSampleBlock(buffer.getReadPointer(0), numSamples);
+    float currentCutoff = apvts.getRawParameterValue("filter_cutoff")->load();
+    float currentRes = apvts.getRawParameterValue("filter_res")->load();
+    visualizer.setFilterCutoffAndRes(currentCutoff, currentRes);
+
+    // 10. Track Peak Levels for UI VU Meter
     float peakL = buffer.getMagnitude(0, 0, numSamples);
     float peakR = (totalNumOutputChannels > 1) ? buffer.getMagnitude(1, 0, numSamples) : peakL;
     outputLevelL.store(peakL);
@@ -487,6 +510,29 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("zeddify_active", 1), "Zeddify Active", 0, 1, 0));
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("auto_master_active", 1), "Auto Master Active", 0, 1, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("auto_master_intensity", 1), "Auto Master Intensity", 0.0f, 1.0f, 0.8f));
+
+    // Arpeggiator Parameters
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("arp_mode", 1), "Arp Mode", 0, 5, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("arp_rate", 1), "Arp Rate", 0, 5, 2));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("arp_octaves", 1), "Arp Octaves", 1, 4, 1));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("arp_swing", 1), "Arp Swing", 0.0f, 0.75f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("arp_gate", 1), "Arp Gate", 0.1f, 1.0f, 0.8f));
+
+    // Bitcrusher Parameters
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("bitcrush_active", 1), "Bitcrush Active", 0, 1, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("bitcrush_bits", 1), "Bit Depth", 1, 16, 8));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("bitcrush_downsample", 1), "Downsample", 1, 32, 1));
+
+    // Wavefolder Parameters
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("wavefold_active", 1), "Wavefold Active", 0, 1, 0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("wavefold_drive", 1), "Wavefold Drive", 1.0f, 10.0f, 1.0f));
+
+    // Phaser Parameters
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("phaser_active", 1), "Phaser Active", 0, 1, 0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("phaser_rate", 1), "Phaser Rate", 0.1f, 10.0f, 0.5f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("phaser_depth", 1), "Phaser Depth", 0.0f, 1.0f, 0.5f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("phaser_feedback", 1), "Phaser Feedback", 0.0f, 0.95f, 0.3f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("phaser_mix", 1), "Phaser Mix", 0.0f, 1.0f, 0.0f));
 
     return { params.begin(), params.end() };
 }

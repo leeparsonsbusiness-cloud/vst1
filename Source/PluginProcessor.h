@@ -6,6 +6,11 @@
 #include "PresetManager.h"
 #include "ZeddifyEngine.h"
 #include "AutoMaster.h"
+#include "Arpeggiator.h"
+#include "VisualizerComponent.h"
+#include "SampleLayer.h"
+#include "ModulationMatrix.h"
+#include "ExpandedFX.h"
 
 class KeshaZeddSynthAudioProcessor : public juce::AudioProcessor
 {
@@ -42,6 +47,10 @@ public:
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
     PresetManager& getPresetManager() { return presetManager; }
     ZeddifyEngine& getZeddifyEngine() { return zeddifyEngine; }
+    Arpeggiator& getArpeggiator() { return arpeggiator; }
+    ModulationMatrix& getModMatrix() { return modMatrix; }
+    VisualizerComponent& getVisualizer() { return visualizer; }
+    
     int getActiveVoiceCount() const { return activeVoiceCount.load(); }
 
     float getOutputLevelL() const { return outputLevelL.load(); }
@@ -59,6 +68,10 @@ private:
     PresetManager presetManager;
     ZeddifyEngine zeddifyEngine;
     AutoMaster autoMaster;
+    Arpeggiator arpeggiator;
+    ModulationMatrix modMatrix;
+    ExpandedFX expandedFX;
+    VisualizerComponent visualizer;
 
     std::atomic<int> activeVoiceCount { 0 };
     std::atomic<float> outputLevelL { 0.0f };

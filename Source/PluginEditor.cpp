@@ -174,6 +174,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     autoMasterIntensityAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "auto_master_intensity", autoMasterIntensitySlider);
 
     addAndMakeVisible(vuMeter);
+    addAndMakeVisible(audioProcessor.getVisualizer());
 
     setupSlider(masterVolSlider, masterVolLabel, "MASTER");
     masterVolAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "master_vol", masterVolSlider);
@@ -628,6 +629,8 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     vuMeter.setBounds(920, 18, 10, 32);
 
     voiceCountLabel.setBounds(932, 18, 20, 26);
+
+    audioProcessor.getVisualizer().setBounds(15, 55, 930, 80);
 
     // Section 1: Oscillators & Unison (x: 15, y: 65, w: 450, h: 260)
     osc1ShapeLabel.setBounds(30, 95, 80, 15);

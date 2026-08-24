@@ -30,6 +30,7 @@ target_sources(KeshaZeddSynth
         Source/PostFX.cpp
         Source/PresetManager.cpp
         Source/AutoMaster.cpp
+        Source/ExpandedFX.cpp
 )
 
 target_include_directories(KeshaZeddSynth
