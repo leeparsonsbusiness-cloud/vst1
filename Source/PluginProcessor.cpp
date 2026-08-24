@@ -171,7 +171,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         processedMidi = midiMessages;
     }
 
-    // 2. Legato Monophonic Glide Interception
+    // 2. Play Mode Routing (Poly, Mono Legato, Mono Retrig)
     juce::MidiBuffer finalMidi;
     if (playMode == 1) // Mono Legato
     {
@@ -248,21 +248,56 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
             }
         }
     }
-    else
+    else if (playMode == 2) // Mono Retrigger
+    {
+        for (const auto metadata : processedMidi)
+        {
+            auto message = metadata.getMessage();
+            auto samplePos = metadata.samplePosition;
+            
+            if (message.isNoteOn())
+            {
+                int note = message.getNoteNumber();
+                heldNotes.erase(std::remove(heldNotes.begin(), heldNotes.end(), note), heldNotes.end());
+                heldNotes.push_back(note);
+                
+                if (lastMidiNoteNumber != -1)
+                    finalMidi.addEvent(juce::MidiMessage::noteOff(message.getChannel(), lastMidiNoteNumber), samplePos);
+                
+                lastMidiNoteNumber = note;
+                finalMidi.addEvent(message, samplePos);
+            }
+            else if (message.isNoteOff())
+            {
+                int note = message.getNoteNumber();
+                heldNotes.erase(std::remove(heldNotes.begin(), heldNotes.end(), note), heldNotes.end());
+                
+                if (note == lastMidiNoteNumber)
+                {
+                    finalMidi.addEvent(message, samplePos);
+                    if (!heldNotes.empty())
+                    {
+                        int prevNote = heldNotes.back();
+                        lastMidiNoteNumber = prevNote;
+                        finalMidi.addEvent(juce::MidiMessage::noteOn(message.getChannel(), prevNote, 0.85f), samplePos);
+                    }
+                    else
+                    {
+                        lastMidiNoteNumber = -1;
+                    }
+                }
+            }
+            else
+            {
+                finalMidi.addEvent(message, samplePos);
+            }
+        }
+    }
+    else // Polyphonic mode
     {
         heldNotes.clear();
         activeLegatoNote = -1;
         lastMidiNoteNumber = -1;
-        
-        for (int i = 0; i < synth.getNumVoices(); ++i)
-        {
-            if (auto* voice = dynamic_cast<SynthVoice*>(synth.getVoice(i)))
-            {
-                float noteFreq = static_cast<float>(juce::MidiMessage::getMidiNoteInHertz(voice->getCurrentlyPlayingNote()));
-                if (noteFreq > 0.0f)
-                    voice->glideTo(noteFreq, 0.0f);
-            }
-        }
         finalMidi = processedMidi;
     }
 
@@ -456,9 +491,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
                                                                  juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.4f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("filter_decay_curve", 1), "Filter Decay Curve", 0.1f, 5.0f, 1.0f));
 
-    // Play Mode & Legato
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("play_mode", 1), "Play Mode", 0, 1, 0)); // 0: Poly, 1: Mono Legato
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("glide_time", 1), "Glide Time", 0.0f, 1000.0f, 100.0f));
+    // Play Mode, Portamento & Pitch Bend Range
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("play_mode", 1), "Play Mode", 0, 2, 0)); // 0: Poly, 1: Mono Legato, 2: Mono Retrig
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("glide_mode", 1), "Glide Mode", 0, 2, 0)); // 0: Auto/Legato, 1: Always, 2: Off
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("glide_time", 1), "Glide Time", 
+                                                                 juce::NormalisableRange<float>(0.0f, 2000.0f, 0.5f, 0.4f), 80.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("pitch_bend_range", 1), "Pitch Bend Range", 1.0f, 24.0f, 2.0f));
 
     // Pitch Drop
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("pitch_drop_active", 1), "Pitch Drop Active", 0, 1, 0));

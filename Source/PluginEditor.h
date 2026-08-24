@@ -449,8 +449,8 @@ private:
     juce::Label subLevelLabel, subDriveLabel;
 
     // Settings
-    juce::ComboBox playModeBox, chordModeBox, chordTypeBox;
-    juce::Label playModeLabel, chordModeLabel, chordTypeLabel;
+    juce::ComboBox playModeBox, chordModeBox, chordTypeBox, glideModeBox;
+    juce::Label playModeLabel, chordModeLabel, chordTypeLabel, glideModeLabel;
     juce::ComboBox pitchDropActiveBox;
     juce::Label pitchDropActiveLabel;
     juce::Slider pitchDropOctavesSlider, pitchDropTimeSlider;
@@ -524,7 +524,7 @@ private:
     std::unique_ptr<ComboBoxAttachment> subWaveAttachment, subOctaveAttachment;
     std::unique_ptr<SliderAttachment> subLevelAttachment, subDriveAttachment;
 
-    std::unique_ptr<ComboBoxAttachment> playModeAttachment, chordModeAttachment, chordTypeAttachment;
+    std::unique_ptr<ComboBoxAttachment> playModeAttachment, chordModeAttachment, chordTypeAttachment, glideModeAttachment;
     std::unique_ptr<ComboBoxAttachment> pitchDropActiveAttachment;
     std::unique_ptr<SliderAttachment> pitchDropOctavesAttachment, pitchDropTimeAttachment, glideTimeAttachment;
 

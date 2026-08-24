@@ -17,9 +17,12 @@ void SynthVoice::startNote(int midiNoteNumber, float velocity, juce::Synthesiser
     midiNote = midiNoteNumber;
     float targetFreq = static_cast<float>(juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber));
     
-    if (glideTimeMs > 0.05f && targetFrequency > 0.0f)
+    // Check if we should glide from previous frequency
+    bool shouldGlide = (glideTimeMs > 0.5f) && (glideMode != 2); // 2: Off
+
+    if (shouldGlide && lastPlayedFrequency > 20.0f)
     {
-        // Glide from last frequency
+        currentFrequency = lastPlayedFrequency;
     }
     else
     {
@@ -27,17 +30,29 @@ void SynthVoice::startNote(int midiNoteNumber, float velocity, juce::Synthesiser
     }
     
     targetFrequency = targetFreq;
+    lastPlayedFrequency = targetFreq;
     noteVelocity = velocity;
 
-    for (int i = 0; i < 7; ++i)
-        osc1Phases[i] = random.nextFloat() * juce::MathConstants<float>::twoPi;
-    osc2Phase = random.nextFloat() * juce::MathConstants<float>::twoPi;
+    // Only randomize oscillator phases on fresh non-gliding triggers
+    if (!shouldGlide || std::abs(currentFrequency - targetFrequency) < 0.1f)
+    {
+        for (int i = 0; i < 7; ++i)
+            osc1Phases[i] = random.nextFloat() * juce::MathConstants<float>::twoPi;
+        osc2Phase = random.nextFloat() * juce::MathConstants<float>::twoPi;
+    }
 
-    // Trigger transient shaper
-    transientTime = 0.0f;
-    transientActive = true;
-    transientPhase = 0.0f;
-    lastTransientSample = 0.0f;
+    // Trigger transient shaper only on fresh non-gliding attacks
+    if (!shouldGlide || std::abs(currentFrequency - targetFrequency) < 0.1f)
+    {
+        transientTime = 0.0f;
+        transientActive = true;
+        transientPhase = 0.0f;
+        lastTransientSample = 0.0f;
+    }
+    else
+    {
+        transientActive = false;
+    }
 
     // Reset sub phase
     subPhase = 0.0f;
@@ -64,7 +79,17 @@ void SynthVoice::stopNote(float /*velocity*/, bool allowTailOff)
     }
 }
 
-void SynthVoice::pitchWheelMoved(int /*newPitchWheelValue*/) {}
+void SynthVoice::pitchWheelMoved(int newPitchWheelValue)
+{
+    float normalized = (static_cast<float>(newPitchWheelValue) - 8192.0f) / 8192.0f;
+    pitchWheelSemitones = normalized * pitchBendRange;
+}
+
+void SynthVoice::setPitchBend(float semitones)
+{
+    pitchWheelSemitones = semitones;
+}
+
 void SynthVoice::controllerMoved(int /*controllerNumber*/, int /*newControllerValue*/) {}
 
 void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outputChannels)
@@ -105,16 +130,13 @@ void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outpu
 void SynthVoice::glideTo(float targetFreq, float glideTimeMsVal)
 {
     targetFrequency = targetFreq;
-    glideTimeMs = glideTimeMsVal;
-    
-    if (glideTimeMs <= 0.05f)
+    lastPlayedFrequency = targetFreq;
+    if (glideTimeMsVal >= 0.0f)
+        glideTimeMs = glideTimeMsVal;
+        
+    if (glideTimeMs <= 0.5f)
     {
         currentFrequency = targetFrequency;
-        glideFactor = 0.0f;
-    }
-    else
-    {
-        glideFactor = std::pow(0.01f, 1.0f / (glideTimeMs * 0.001f * static_cast<float>(currentSampleRate)));
     }
 }
 
@@ -202,8 +224,12 @@ void SynthVoice::updateParameters(juce::AudioProcessorValueTreeState& apvts)
     // Formant filter morph
     formantMorph = apvts.getRawParameterValue("formant_morph")->load();
 
-    // Legato glide time
+    // Portamento & Glide parameters
     glideTimeMs = apvts.getRawParameterValue("glide_time")->load();
+    if (apvts.getRawParameterValue("glide_mode") != nullptr)
+        glideMode = static_cast<int>(apvts.getRawParameterValue("glide_mode")->load());
+    if (apvts.getRawParameterValue("pitch_bend_range") != nullptr)
+        pitchBendRange = apvts.getRawParameterValue("pitch_bend_range")->load();
 
     // Map Ladder Filter mode
     if (filterMode < 4)
@@ -327,19 +353,31 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
         }
         float lfo2Val = generateLfoSample(lfo2Wave, lfo2Phase, lastRandomVal2, lfo2Wrapped);
 
-        // Process Legato Glide Frequency
-        if (glideTimeMs > 0.05f)
+        // Process Smooth Portamento & Legato Pitch Slide in Logarithmic Musical Cents
+        if (glideTimeMs > 0.5f && currentFrequency > 10.0f && targetFrequency > 10.0f)
         {
-            currentFrequency = currentFrequency * glideFactor + targetFrequency * (1.0f - glideFactor);
+            if (std::abs(currentFrequency - targetFrequency) > 0.01f)
+            {
+                float currentCents = 1200.0f * std::log2(currentFrequency / 440.0f);
+                float targetCents = 1200.0f * std::log2(targetFrequency / 440.0f);
+                float alpha = 1.0f - std::exp(-1.0f / (std::max(0.001f, glideTimeMs * 0.001f) * static_cast<float>(currentSampleRate) * 0.22f));
+                currentCents += (targetCents - currentCents) * alpha;
+                currentFrequency = 440.0f * std::pow(2.0f, currentCents / 1200.0f);
+            }
+            else
+            {
+                currentFrequency = targetFrequency;
+            }
         }
         else
         {
             currentFrequency = targetFrequency;
         }
 
-        // Apply LFO 2 Vibrato pitch modulation (+-2 semitones)
+        // Apply Pitch Bend Wheel + LFO 2 Vibrato pitch modulation (+-2 semitones)
         float vibratoMod = lfo2Val * lfo2ToPitch * 2.0f;
-        float modulatedFreq = currentFrequency * std::pow(2.0f, vibratoMod / 12.0f);
+        float totalPitchOffset = pitchWheelSemitones + vibratoMod;
+        float modulatedFreq = currentFrequency * std::pow(2.0f, totalPitchOffset / 12.0f);
 
         // Process Pitch Drop Sweep
         float pitchFreq = modulatedFreq;
@@ -420,172 +458,165 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
                 subPhase -= juce::MathConstants<float>::twoPi;
         }
 
-        // Update Osc 2 phase (modulator)
-        float osc2Freq = pitchFreq * std::pow(2.0f, osc2Octave + (osc2DetuneCents / 1200.0f));
-        float osc2PhaseInc = (juce::MathConstants<float>::twoPi * osc2Freq) / static_cast<float>(currentSampleRate);
-        
-        bool osc2Wrapped = false;
-        osc2Phase += osc2PhaseInc;
+        // 1. Calculate Oscillator 2 (Modulator)
+        float osc2BaseFreq = pitchFreq * std::pow(2.0f, static_cast<float>(osc2Octave) + (osc2DetuneCents / 1200.0f));
+        float osc2Inc = (juce::MathConstants<float>::twoPi * osc2BaseFreq) / static_cast<float>(currentSampleRate);
+        float osc2Sample = generateMorphedSample(osc2Shape, osc2Phase) * osc2Level;
+
+        osc2Phase += osc2Inc;
         if (osc2Phase >= juce::MathConstants<float>::twoPi)
-        {
             osc2Phase -= juce::MathConstants<float>::twoPi;
-            osc2Wrapped = true;
-        }
-        
-        // Osc 2 morphing
-        float osc2Val = generateMorphedSample(osc2Shape, osc2Phase);
-        
-        // FM Modulator: modulates Osc 1 phase
-        float fmModulator = osc2Val * osc2Level * fmDepth * 5.0f;
 
-        // Generate Osc 1 (Unison Stereo Sum) with shape morphing and sync
-        float osc1SampleL = 0.0f;
-        float osc1SampleR = 0.0f;
-        float osc1BaseFreq = pitchFreq * std::pow(2.0f, osc1Octave + (osc1DetuneCents / 1200.0f));
+        // 2. Calculate Oscillator 1 with 7-Voice Stereo Unison, FM, and Hard Sync
+        float osc1BaseFreq = pitchFreq * std::pow(2.0f, static_cast<float>(osc1Octave) + (osc1DetuneCents / 1200.0f));
+        
+        // Modulate Osc 1 Shape with LFO 1
+        float modulatedOsc1Shape = juce::jlimit(0.0f, 3.0f, osc1Shape + lfo1Val * lfo1ToShape * 3.0f);
 
-        // Modulate Osc 1 shape with LFO 1
-        float modOsc1Shape = juce::jlimit(0.0f, 3.0f, osc1Shape + lfo1Val * lfo1ToShape);
+        float osc1Left = 0.0f;
+        float osc1Right = 0.0f;
 
         for (int u = 0; u < numUnisonVoices; ++u)
         {
-            float detuneOffset = (numUnisonVoices > 1) ? unisonOffsets[u] * (unisonDetuneCents / 1200.0f) : 0.0f;
-            float voiceFreq = osc1BaseFreq * std::pow(2.0f, detuneOffset);
-            float phaseInc = (juce::MathConstants<float>::twoPi * voiceFreq) / static_cast<float>(currentSampleRate);
+            float detuneOffset = unisonOffsets[u] * (unisonDetuneCents / 1200.0f);
+            float uFreq = osc1BaseFreq * std::pow(2.0f, detuneOffset);
 
-            // Hard Sync
-            if (oscSyncActive && osc2Wrapped)
-            {
+            // Cross-FM from Osc 2
+            float fmPhaseMod = osc2Sample * fmDepth * juce::MathConstants<float>::twoPi;
+            float totalPhase = osc1Phases[u] + fmPhaseMod;
+            while (totalPhase >= juce::MathConstants<float>::twoPi) totalPhase -= juce::MathConstants<float>::twoPi;
+            while (totalPhase < 0.0f) totalPhase += juce::MathConstants<float>::twoPi;
+
+            float uSample = generateMorphedSample(modulatedOsc1Shape, totalPhase);
+
+            // Apply stereo panning per unison voice
+            float panL = (numUnisonVoices > 1) ? unisonPansL[u] : 0.5f;
+            float panR = (numUnisonVoices > 1) ? unisonPansR[u] : 0.5f;
+
+            osc1Left  += uSample * panL;
+            osc1Right += uSample * panR;
+
+            float uInc = (juce::MathConstants<float>::twoPi * uFreq) / static_cast<float>(currentSampleRate);
+            osc1Phases[u] += uInc;
+
+            // Oscillator Hard Sync: Reset Osc 1 phase when Osc 2 wraps around
+            if (oscSyncActive && osc2Phase < osc2Inc)
                 osc1Phases[u] = 0.0f;
-            }
-
-            osc1Phases[u] += phaseInc;
-            if (osc1Phases[u] >= juce::MathConstants<float>::twoPi)
+            else if (osc1Phases[u] >= juce::MathConstants<float>::twoPi)
                 osc1Phases[u] -= juce::MathConstants<float>::twoPi;
-
-            // Apply FM Phase Modulation
-            float modulatedPhase = osc1Phases[u] + fmModulator;
-            while (modulatedPhase >= juce::MathConstants<float>::twoPi) modulatedPhase -= juce::MathConstants<float>::twoPi;
-            while (modulatedPhase < 0.0f) modulatedPhase += juce::MathConstants<float>::twoPi;
-
-            float sampleVal = generateMorphedSample(modOsc1Shape, modulatedPhase);
-
-            osc1SampleL += sampleVal * unisonPansL[u];
-            osc1SampleR += sampleVal * unisonPansR[u];
         }
 
         float unisonNorm = 1.0f / std::sqrt(static_cast<float>(numUnisonVoices));
-        osc1SampleL *= osc1Level * unisonNorm;
-        osc1SampleR *= osc1Level * unisonNorm;
+        osc1Left  *= (unisonNorm * osc1Level);
+        osc1Right *= (unisonNorm * osc1Level);
 
-        // Stereo panning modulation via LFO 2
-        float effectivePan = lfo2Val * lfo2ToPan;
-        float panL = std::cos((effectivePan + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-        float panR = std::sin((effectivePan + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        // Mix Osc 1 + Osc 2 + Click Transient
+        float mixL = osc1Left  + osc2Sample * 0.5f + clickSample;
+        float mixR = osc1Right + osc2Sample * 0.5f + clickSample;
 
-        float mixedL = (osc1SampleL * panL) + (osc2Val * osc2Level * panL);
-        float mixedR = (osc1SampleR * panR) + (osc2Val * osc2Level * panR);
+        // 3. Dynamic Filter Processing
+        float keyTrackOffset = (static_cast<float>(midiNote) - 60.0f) * (filterKeyTrack * 100.0f);
+        float lfoCutoffMod = lfo1Val * lfo1ToCutoff * 4000.0f;
+        float envCutoffMod = filterVal * filterEnvAmount * 8000.0f;
+        float finalCutoff = baseCutoffHz + keyTrackOffset + lfoCutoffMod + envCutoffMod;
+        finalCutoff = juce::jlimit(20.0f, 20000.0f, finalCutoff);
 
-        // Mix down with main amp envelope and note velocity
-        float voiceSampleL = mixedL * ampVal * noteVelocity + clickSample;
-        float voiceSampleR = mixedR * ampVal * noteVelocity + clickSample;
-
-        // Apply pre-filter saturation (Drive)
-        voiceSampleL = std::tanh(voiceSampleL * filterDrive);
-        voiceSampleR = std::tanh(voiceSampleR * filterDrive);
-
-        // 7. Filter Section
-        float filteredL = voiceSampleL;
-        float filteredR = voiceSampleR;
-
-        // Calculate modulated filter cutoff (Envelope + Keytrack + LFO 1)
-        float envModSemitones = filterVal * filterEnvAmount * 48.0f; // +-4 octaves
-        float keyTrackSemitones = (static_cast<float>(midiNote) - 60.0f) * filterKeyTrack;
-        float lfoCutoffMod = lfo1Val * filterLfoModAmount * 60.0f; // +-5 octaves
-
-        float totalModSemitones = envModSemitones + keyTrackSemitones + lfoCutoffMod;
-        float modCutoff = baseCutoffHz * std::pow(2.0f, totalModSemitones / 12.0f);
-        modCutoff = juce::jlimit(20.0f, 20000.0f, modCutoff);
-
-        if (filterMode == 5) // Vowel Formant Filter (Morphable A-E-I-O-U)
+        // Apply Drive pre-saturation
+        if (filterDrive > 1.01f)
         {
-            float modulatedMorph = formantMorph + (filterVal * filterEnvAmount * 4.0f);
-            modulatedMorph = juce::jlimit(0.0f, 4.0f, modulatedMorph);
-
-            // Morph vowel frequencies
-            static const float f1s[5] = { 700.0f, 500.0f, 300.0f, 570.0f, 300.0f };
-            static const float f2s[5] = { 1220.0f, 1700.0f, 2200.0f, 840.0f, 870.0f };
-            static const float f3s[5] = { 2600.0f, 2440.0f, 3000.0f, 2410.0f, 2240.0f };
-
-            int idx = static_cast<int>(modulatedMorph);
-            float frac = modulatedMorph - static_cast<float>(idx);
-
-            float f1 = (idx < 4) ? (f1s[idx] * (1.0f - frac) + f1s[idx + 1] * frac) : f1s[4];
-            float f2 = (idx < 4) ? (f2s[idx] * (1.0f - frac) + f2s[idx + 1] * frac) : f2s[4];
-            float f3 = (idx < 4) ? (f3s[idx] * (1.0f - frac) + f3s[idx + 1] * frac) : f3s[4];
-
-            float Q = 3.0f + filterResonance * 12.0f;
-            float damping = 1.0f / Q;
-
-            formantF1L.setCutoffFrequency(f1);
-            formantF1R.setCutoffFrequency(f1);
-            formantF2L.setCutoffFrequency(f2);
-            formantF2R.setCutoffFrequency(f2);
-            formantF3L.setCutoffFrequency(f3);
-            formantF3R.setCutoffFrequency(f3);
-
-            formantF1L.setResonance(damping);
-            formantF1R.setResonance(damping);
-            formantF2L.setResonance(damping);
-            formantF2R.setResonance(damping);
-            formantF3L.setResonance(damping);
-            formantF3R.setResonance(damping);
-
-            filteredL = formantF1L.processSample(0, voiceSampleL) +
-                        formantF2L.processSample(0, voiceSampleL) * 0.5f +
-                        formantF3L.processSample(0, voiceSampleL) * 0.25f;
-
-            filteredR = formantF1R.processSample(0, voiceSampleR) +
-                        formantF2R.processSample(0, voiceSampleR) * 0.5f +
-                        formantF3R.processSample(0, voiceSampleR) * 0.25f;
+            mixL = std::tanh(mixL * filterDrive);
+            mixR = std::tanh(mixR * filterDrive);
         }
-        else if (filterMode == 4) // Notch Filter (Custom Biquad)
+
+        float outL = mixL;
+        float outR = mixR;
+
+        if (filterMode < 4) // Ladder Filter modes (LPF12, LPF24, BPF, HPF)
         {
-            float Q = 0.5f + filterResonance * 4.0f;
-            notchFilterL.setNotch(static_cast<float>(currentSampleRate), modCutoff, Q);
-            notchFilterR.setNotch(static_cast<float>(currentSampleRate), modCutoff, Q);
-            filteredL = notchFilterL.process(voiceSampleL);
-            filteredR = notchFilterR.process(voiceSampleR);
-        }
-        else // LP12, LP24, BP, HP
-        {
-            filter.setCutoffFrequencyHz(modCutoff);
+            filter.setCutoffFrequencyHz(finalCutoff);
 
             if (numBufferChannels == 1)
             {
-                float* channelData[] = { &filteredL };
+                float* channelData[] = { &outL };
                 juce::dsp::AudioBlock<float> block(channelData, 1, 1);
                 juce::dsp::ProcessContextReplacing<float> context(block);
                 filter.process(context);
             }
             else if (numBufferChannels >= 2)
             {
-                float* channelData[] = { &filteredL, &filteredR };
+                float* channelData[] = { &outL, &outR };
                 juce::dsp::AudioBlock<float> block(channelData, 2, 1);
                 juce::dsp::ProcessContextReplacing<float> context(block);
                 filter.process(context);
             }
         }
-
-        // Output to channels 0 & 1 (FX path)
-        int sampleIdx = startSample + sample;
-        outputBuffer.addSample(0, sampleIdx, filteredL);
-        if (numBufferChannels > 1)
-            outputBuffer.addSample(1, sampleIdx, filteredR);
-
-        // Render mono sub anchor to channel 2 (Bypasses post FX)
-        if (numBufferChannels > 2)
+        else if (filterMode == 4) // Notch Filter (Dual Biquad)
         {
-            outputBuffer.addSample(2, sampleIdx, subSample);
+            float Q = 0.5f + filterResonance * 9.5f;
+            notchFilterL.setNotch(static_cast<float>(currentSampleRate), finalCutoff, Q);
+            notchFilterR.setNotch(static_cast<float>(currentSampleRate), finalCutoff, Q);
+            outL = notchFilterL.process(mixL);
+            outR = notchFilterR.process(mixR);
         }
+        else if (filterMode == 5) // Vowel Formant Filter (A - E - I - O - U morph)
+        {
+            // Formant frequencies (Hz) for [A, E, I, O, U]
+            static const float f1Table[5] = { 800.0f, 400.0f, 250.0f, 450.0f, 325.0f };
+            static const float f2Table[5] = { 1200.0f, 2000.0f, 2100.0f, 800.0f, 700.0f };
+            static const float f3Table[5] = { 2500.0f, 2800.0f, 3000.0f, 2500.0f, 2550.0f };
+
+            float m = juce::jlimit(0.0f, 4.0f, formantMorph + filterVal * filterEnvAmount * 2.0f);
+            int idx = static_cast<int>(m);
+            float frac = m - static_cast<float>(idx);
+            int nextIdx = std::min(4, idx + 1);
+
+            float f1 = f1Table[idx] * (1.0f - frac) + f1Table[nextIdx] * frac;
+            float f2 = f2Table[idx] * (1.0f - frac) + f2Table[nextIdx] * frac;
+            float f3 = f3Table[idx] * (1.0f - frac) + f3Table[nextIdx] * frac;
+
+            formantF1L.setCutoffFrequency(f1); formantF1R.setCutoffFrequency(f1);
+            formantF2L.setCutoffFrequency(f2); formantF2R.setCutoffFrequency(f2);
+            formantF3L.setCutoffFrequency(f3); formantF3R.setCutoffFrequency(f3);
+
+            formantF1L.setResonance(4.0f + filterResonance * 6.0f);
+            formantF1R.setResonance(4.0f + filterResonance * 6.0f);
+            formantF2L.setResonance(4.0f + filterResonance * 6.0f);
+            formantF2R.setResonance(4.0f + filterResonance * 6.0f);
+            formantF3L.setResonance(4.0f + filterResonance * 6.0f);
+            formantF3R.setResonance(4.0f + filterResonance * 6.0f);
+
+            float vL = formantF1L.processSample(0, mixL) * 1.2f 
+                     + formantF2L.processSample(0, mixL) * 0.8f 
+                     + formantF3L.processSample(0, mixL) * 0.5f;
+
+            float vR = formantF1R.processSample(0, mixR) * 1.2f 
+                     + formantF2R.processSample(0, mixR) * 0.8f 
+                     + formantF3R.processSample(0, mixR) * 0.5f;
+
+            outL = vL;
+            outR = vR;
+        }
+
+        // 4. Apply Amp Envelope and Note Velocity
+        float gain = ampVal * noteVelocity;
+        outL *= gain;
+        outR *= gain;
+
+        // Apply LFO 2 Auto-Pan
+        float panMod = lfo2Val * lfo2ToPan * 0.5f; // -0.5 to +0.5
+        float finalPanL = juce::jlimit(0.0f, 1.0f, 0.5f - panMod);
+        float finalPanR = juce::jlimit(0.0f, 1.0f, 0.5f + panMod);
+
+        outL *= (finalPanL * 2.0f);
+        outR *= (finalPanR * 2.0f);
+
+        // Mix output into synth channels (0 & 1)
+        outputBuffer.addSample(0, startSample + sample, outL);
+        if (numBufferChannels > 1)
+            outputBuffer.addSample(1, startSample + sample, outR);
+
+        // Mix Phase-Locked Sub-Oscillator into Channel 2 (bypasses stereo unison, chorus, widening)
+        if (numBufferChannels > 2 && subLevel > 0.001f)
+            outputBuffer.addSample(2, startSample + sample, subSample * gain);
     }
 }

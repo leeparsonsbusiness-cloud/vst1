@@ -27,41 +27,80 @@ public:
 
     void processMidiBlock(juce::MidiBuffer& midiMessages, bool zeddifyActive, int numSamples)
     {
+        // Handle deactivation: send note-off for any stuck note and clear state
         if (!zeddifyActive)
         {
+            if (wasActive && lastTriggeredNote != -1)
+            {
+                // Build a clean buffer with just the cleanup note-off plus any pass-through
+                juce::MidiBuffer cleanBuffer;
+                cleanBuffer.addEvent(juce::MidiMessage::noteOff(1, lastTriggeredNote, 0.0f), 0);
+                // Pass through all original events after the cleanup
+                for (const auto metadata : midiMessages)
+                    cleanBuffer.addEvent(metadata.getMessage(), metadata.samplePosition);
+                midiMessages.swapWith(cleanBuffer);
+                lastTriggeredNote = -1;
+            }
+            wasActive = false;
             playingActive = false;
+            currentStepIndex = 0;
+            samplesInCurrentStep = 0;
             return;
         }
+        wasActive = true;
 
-        // Intercept single note-on triggers
+        // Collect note-on/off events from the incoming buffer FIRST, without modifying it
+        int newRootNote = -1;
+        bool rootReleased = false;
+        int releasePosition = 0;
+
         for (const auto metadata : midiMessages)
         {
             auto msg = metadata.getMessage();
             if (msg.isNoteOn())
             {
-                currentRootNote = msg.getNoteNumber();
-                playingActive = true;
-                currentStepIndex = 0;
-                samplesInCurrentStep = 0;
-                lastTriggeredNote = -1;
+                newRootNote = msg.getNoteNumber();
             }
             else if (msg.isNoteOff() && msg.getNoteNumber() == currentRootNote)
             {
-                // Sequence completes pattern or stops when key is released
-                playingActive = false;
-                if (lastTriggeredNote != -1)
-                {
-                    midiMessages.addEvent(juce::MidiMessage::noteOff(1, lastTriggeredNote, 0.0f), metadata.samplePosition);
-                    lastTriggeredNote = -1;
-                }
+                rootReleased = true;
+                releasePosition = metadata.samplePosition;
             }
         }
 
-        if (!playingActive)
-            return;
+        // Now apply state changes based on collected events
+        if (newRootNote >= 0)
+        {
+            currentRootNote = newRootNote;
+            if (!playingActive)
+            {
+                playingActive = true;
+                currentStepIndex = 0;
+                samplesInCurrentStep = 0;
+            }
+        }
 
+        // Build output buffer from scratch (never mutate during iteration)
         juce::MidiBuffer zeddifiedBuffer;
-        
+
+        if (rootReleased && newRootNote < 0)
+        {
+            playingActive = false;
+            if (lastTriggeredNote != -1)
+            {
+                zeddifiedBuffer.addEvent(juce::MidiMessage::noteOff(1, lastTriggeredNote, 0.0f), releasePosition);
+                lastTriggeredNote = -1;
+            }
+            midiMessages.swapWith(zeddifiedBuffer);
+            return;
+        }
+
+        if (!playingActive)
+        {
+            midiMessages.swapWith(zeddifiedBuffer);
+            return;
+        }
+
         // 16th note length in samples
         double secondsPerBeat = 60.0 / std::max(20.0, hostBpm);
         double secondsPer16th = secondsPerBeat * 0.25;
@@ -98,7 +137,7 @@ public:
             }
         }
 
-        // Swap original buffer with zeddified MIDI pattern
+        // Replace original buffer with zeddified output
         midiMessages.swapWith(zeddifiedBuffer);
     }
 
@@ -221,6 +260,7 @@ private:
     double hostBpm = 120.0;
     std::vector<Step> pattern;
 
+    bool wasActive = false;
     bool playingActive = false;
     int currentRootNote = 60;
     int currentStepIndex = 0;

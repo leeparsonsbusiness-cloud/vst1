@@ -427,8 +427,12 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     subDriveAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "sub_drive", subDriveSlider);
 
     setupComboBox(playModeBox, playModeLabel, "VOICING");
-    playModeBox.addItemList({"Poly (8 Voice)", "Mono Legato"}, 1);
+    playModeBox.addItemList({"Poly (8 Voice)", "Mono Legato", "Mono Retrig"}, 1);
     playModeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "play_mode", playModeBox);
+
+    setupComboBox(glideModeBox, glideModeLabel, "GLIDE MODE");
+    glideModeBox.addItemList({"Auto Legato", "Always Porta", "Glide Off"}, 1);
+    glideModeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "glide_mode", glideModeBox);
 
     setupComboBox(chordModeBox, chordModeLabel, "SMART CHORD");
     chordModeBox.addItemList({"Bypass Chord", "Chord Enabled"}, 1);
@@ -828,17 +832,17 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     subDriveLabel.setBounds(695, 645, 60, 15);
     subDriveSlider.setBounds(695, 660, 60, 45);
 
-    playModeLabel.setBounds(765, 645, 80, 15);
-    playModeBox.setBounds(765, 660, 80, 24);
+    playModeLabel.setBounds(765, 645, 85, 15);
+    playModeBox.setBounds(765, 660, 85, 24);
 
-    chordModeLabel.setBounds(855, 645, 80, 15);
-    chordModeBox.setBounds(855, 660, 80, 24);
+    glideModeLabel.setBounds(855, 645, 85, 15);
+    glideModeBox.setBounds(855, 660, 85, 24);
 
-    chordTypeLabel.setBounds(765, 690, 80, 15);
-    chordTypeBox.setBounds(765, 705, 80, 24);
+    chordModeLabel.setBounds(765, 690, 85, 15);
+    chordModeBox.setBounds(765, 705, 85, 24);
 
-    pitchDropActiveLabel.setBounds(855, 690, 80, 15);
-    pitchDropActiveBox.setBounds(855, 705, 80, 24);
+    chordTypeLabel.setBounds(855, 690, 85, 15);
+    chordTypeBox.setBounds(855, 705, 85, 24);
 
     pitchDropOctavesLabel.setBounds(495, 715, 65, 15);
     pitchDropOctavesSlider.setBounds(495, 730, 65, 45);

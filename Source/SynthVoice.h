@@ -21,6 +21,13 @@ public:
     void setHostInfo(double bpm);
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
 
+    void glideTo(float targetFreq, float glideTimeMsVal);
+    void setPitchBend(float semitones);
+    void setPitchBendRange(float rangeSemitones) { pitchBendRange = rangeSemitones; }
+    void setPortamento(int mode, float timeMs) { glideMode = mode; glideTimeMs = timeMs; }
+    float getTargetFrequency() const { return targetFrequency; }
+    float getCurrentFrequency() const { return currentFrequency; }
+
 private:
     struct Biquad
     {
@@ -38,7 +45,7 @@ private:
         
         void setNotch(float sRate, float frequency, float Q)
         {
-            float w0 = 2.0f * juce::MathConstants<float>::pi * frequency / sRate;
+            float w0 = 2.0f * juce::MathConstants<float>::twoPi * frequency / sRate;
             float alpha = std::sin(w0) / (2.0f * Q);
             float cosw0 = std::cos(w0);
             
@@ -100,11 +107,7 @@ private:
     float noteVelocity = 0.0f;
     bool isPrepared = false;
 
-public:
-    void glideTo(float targetFreq, float glideTimeMsVal);
-
-private:
-    // New Transient Strike Attack Layer
+    // Transient Strike Attack Layer
     float transientTime = 0.0f;
     float transientDecay = 0.015f;
     float transientLevel = 0.0f;
@@ -126,11 +129,14 @@ private:
     float pitchDropTime = 0.0f;
     float pitchDropDuration = 0.05f;
 
-    // Legato Glide
+    // Smooth Portamento & Legato Pitch Slide
+    int glideMode = 0; // 0: Auto/Legato, 1: Always, 2: Off
+    float glideTimeMs = 80.0f;
     float currentFrequency = 440.0f;
     float targetFrequency = 440.0f;
-    float glideFactor = 0.0f;
-    float glideTimeMs = 100.0f;
+    float lastPlayedFrequency = 440.0f;
+    float pitchBendRange = 2.0f;
+    float pitchWheelSemitones = 0.0f;
 
     // Dual Synced LFO variables
     float lfo1Phase = 0.0f;

@@ -118,7 +118,7 @@ public:
                     if (mode == Up)
                         noteIndex = static_cast<int>((currentStep / 16) % static_cast<int>(numNotes));
                     else if (mode == Down)
-                        noteIndex = static_cast<int>((numNotes - 1) - ((currentStep / 16) % static_cast<int>(numNotes)));
+                        noteIndex = (static_cast<int>(numNotes) - 1) - ((currentStep / 16) % static_cast<int>(numNotes));
                     else if (mode == UpDown)
                     {
                         int cycle = static_cast<int>((currentStep / 16) % static_cast<int>(numNotes * 2));
