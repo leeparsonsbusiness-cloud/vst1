@@ -29,6 +29,7 @@ target_sources(KeshaZeddSynth
         Source/SynthVoice.cpp
         Source/PostFX.cpp
         Source/PresetManager.cpp
+        Source/AutoMaster.cpp
 )
 
 target_include_directories(KeshaZeddSynth

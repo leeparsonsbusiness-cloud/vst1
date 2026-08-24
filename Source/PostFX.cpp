@@ -48,6 +48,8 @@ void PostFX::reset()
     envHighL = 0.0f; envHighR = 0.0f;
 
     sideHPF.reset();
+    delayColorFilterL.reset();
+    delayColorFilterR.reset();
     dropHPF_L.reset();
     dropHPF_R.reset();
 
@@ -62,6 +64,8 @@ void PostFX::process(juce::AudioBuffer<float>& buffer, juce::AudioProcessorValue
     if (numSamples == 0 || numChannels == 0)
         return;
 
+    juce::ignoreUnused(playHeadTimeSeconds);
+
     // Load parameters
     float drive = apvts.getRawParameterValue("fx_drive")->load();
     float chorusRate = apvts.getRawParameterValue("fx_chorus_rate")->load();
@@ -71,14 +75,20 @@ void PostFX::process(juce::AudioBuffer<float>& buffer, juce::AudioProcessorValue
     float delayTimeMs = apvts.getRawParameterValue("fx_delay_time")->load();
     float delayFeedback = apvts.getRawParameterValue("fx_delay_feedback")->load();
     float delayMix = apvts.getRawParameterValue("fx_delay_mix")->load();
+    float delayColor = apvts.getRawParameterValue("fx_delay_color")->load();
+    
+    float reverbDecay = apvts.getRawParameterValue("fx_reverb_decay")->load();
+    float reverbDamping = apvts.getRawParameterValue("fx_reverb_damping")->load();
+    float reverbWidth = apvts.getRawParameterValue("fx_reverb_width")->load();
     float reverbMix = apvts.getRawParameterValue("fx_reverb_mix")->load();
 
     float trashGlossX = apvts.getRawParameterValue("trash_gloss_x")->load();
     float trashGlossY = apvts.getRawParameterValue("trash_gloss_y")->load();
     bool monoMakerActive = apvts.getRawParameterValue("mono_maker_active")->load() > 0.5f;
+    float monoMakerFreq = apvts.getRawParameterValue("mono_maker_frequency")->load();
 
     bool pumpActive = apvts.getRawParameterValue("pump_active")->load() > 0.5f;
-    int pumpDivision = apvts.getRawParameterValue("pump_division")->load();
+    int pumpDivision = static_cast<int>(apvts.getRawParameterValue("pump_division")->load());
     float pumpDepth = apvts.getRawParameterValue("pump_depth")->load();
     float pumpCurve = apvts.getRawParameterValue("pump_curve")->load();
 
@@ -134,19 +144,19 @@ void PostFX::process(juce::AudioBuffer<float>& buffer, juce::AudioProcessorValue
     glossEQ_L.setHighShelf(static_cast<float>(sampleRate), 14000.0f, glossShelfBoost);
     glossEQ_R.setHighShelf(static_cast<float>(sampleRate), 14000.0f, glossShelfBoost);
 
-    // Side HPF for Mono Maker at 120 Hz
-    sideHPF.setHPF(static_cast<float>(sampleRate), 120.0f, 0.707f);
+    // Side HPF for Mono Maker using variable monoMakerFreq
+    sideHPF.setHPF(static_cast<float>(sampleRate), monoMakerFreq, 0.707f);
 
     float alphaCrossover = std::exp(-2.0f * juce::MathConstants<float>::pi * 500.0f / static_cast<float>(sampleRate));
     float decayCoeff = std::exp(-1.0f / (0.035f * static_cast<float>(sampleRate))); // 35ms RMS tracker window
 
-    // Reverb configuration
+    // Reverb configuration using expanded parameters and macro modifiers
     juce::dsp::Reverb::Parameters reverbParams;
     reverbParams.wetLevel = effectiveReverbMix;
     reverbParams.dryLevel = 1.0f - effectiveReverbMix * 0.5f;
-    reverbParams.roomSize = 0.5f + 0.35f * D; // room gets larger during Drop builds
-    reverbParams.damping = 0.4f;
-    reverbParams.width = 1.0f;
+    reverbParams.roomSize = reverbDecay + (0.95f - reverbDecay) * D; // morphs during drop builds
+    reverbParams.damping = reverbDamping;
+    reverbParams.width = reverbWidth;
     reverb.setParameters(reverbParams);
 
     // Sidechain pumping beat tracker
@@ -316,6 +326,11 @@ void PostFX::process(juce::AudioBuffer<float>& buffer, juce::AudioProcessorValue
         float* dBufL = delayBufferL.getWritePointer(0);
         float* dBufR = delayBufferR.getWritePointer(0);
 
+        float fc = 400.0f + delayColor * 15000.0f; // 400Hz to 15.4kHz
+        float dt = 1.0f / static_cast<float>(sampleRate);
+        float tau = 1.0f / (2.0f * juce::MathConstants<float>::pi * fc);
+        float alphaLP = tau / (tau + dt);
+
         for (int s = 0; s < numSamples; ++s)
         {
             int readPosL = (delayWritePosL - delaySampleOffset + delayBufferLength) % delayBufferLength;
@@ -324,15 +339,19 @@ void PostFX::process(juce::AudioBuffer<float>& buffer, juce::AudioProcessorValue
             float delayedL = dBufL[readPosL];
             float delayedR = dBufR[readPosR];
 
+            // Apply color low-pass filters to delayed signals
+            float delayedLP_L = delayColorFilterL.processLP(delayedL, alphaLP);
+            float delayedLP_R = delayColorFilterR.processLP(delayedR, alphaLP);
+
             float inputL = leftData[s];
             float inputR = rightData[s];
 
-            // Cross feedback delay
-            dBufL[delayWritePosL] = inputL + (delayedR * effectiveDelayFeedback);
-            dBufR[delayWritePosR] = inputR + (delayedL * effectiveDelayFeedback);
+            // Cross feedback delay (with color LPF applied to feedback path)
+            dBufL[delayWritePosL] = inputL + (delayedLP_R * effectiveDelayFeedback);
+            dBufR[delayWritePosR] = inputR + (delayedLP_L * effectiveDelayFeedback);
 
-            leftData[s] = inputL * (1.0f - effectiveDelayMix) + delayedL * effectiveDelayMix;
-            rightData[s] = inputR * (1.0f - effectiveDelayMix) + delayedR * effectiveDelayMix;
+            leftData[s] = inputL * (1.0f - effectiveDelayMix) + delayedLP_L * effectiveDelayMix;
+            rightData[s] = inputR * (1.0f - effectiveDelayMix) + delayedLP_R * effectiveDelayMix;
 
             delayWritePosL = (delayWritePosL + 1) % delayBufferLength;
             delayWritePosR = (delayWritePosR + 1) % delayBufferLength;

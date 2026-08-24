@@ -4,6 +4,8 @@
 #include "SynthSound.h"
 #include "PostFX.h"
 #include "PresetManager.h"
+#include "ZeddifyEngine.h"
+#include "AutoMaster.h"
 
 class KeshaZeddSynthAudioProcessor : public juce::AudioProcessor
 {
@@ -39,7 +41,11 @@ public:
 
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
     PresetManager& getPresetManager() { return presetManager; }
+    ZeddifyEngine& getZeddifyEngine() { return zeddifyEngine; }
     int getActiveVoiceCount() const { return activeVoiceCount.load(); }
+
+    float getOutputLevelL() const { return outputLevelL.load(); }
+    float getOutputLevelR() const { return outputLevelR.load(); }
 
     void loadPreset(int index);
     void randomizeParameters();
@@ -51,8 +57,12 @@ private:
     juce::Synthesiser synth;
     PostFX postFX;
     PresetManager presetManager;
+    ZeddifyEngine zeddifyEngine;
+    AutoMaster autoMaster;
 
     std::atomic<int> activeVoiceCount { 0 };
+    std::atomic<float> outputLevelL { 0.0f };
+    std::atomic<float> outputLevelR { 0.0f };
     int currentPresetIndex = 0;
 
     // Legato note tracker stack

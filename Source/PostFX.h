@@ -103,6 +103,9 @@ private:
     // Mono maker HPF at 120 Hz for Side channel
     Biquad sideHPF;
 
+    // Delay color lowpass filters
+    Filter1stOrder delayColorFilterL, delayColorFilterR;
+
     // HPF for "The Drop / Build" Macro
     Biquad dropHPF_L, dropHPF_R;
 
