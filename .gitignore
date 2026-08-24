@@ -1,0 +1,9 @@
+build/
+.DS_Store
+*.suo
+*.user
+*.ncb
+*.sdf
+*.opensdf
+*.VC.db
+.vs/
