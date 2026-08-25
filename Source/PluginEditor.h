@@ -457,6 +457,16 @@ public:
         keshaFestivalMenu.addItem(77, "Take It Off - Glitter Confetti Shimmer FX");
         keshaFestivalMenu.addItem(78, "Take It Off - Stomping Festival Kick & Sub");
         menu.addSubMenu("12_Kesha 'Take It Off' Suite", keshaFestivalMenu);
+
+        // 13. Album Master & Signature Pop Suite
+        juce::PopupMenu albumMasterMenu;
+        albumMasterMenu.addItem(79, "Tik Tok - Glitter Pulse Stab");
+        albumMasterMenu.addItem(80, "Clarity - Pure Complextro Saw Stack");
+        albumMasterMenu.addItem(81, "Die Young - Acoustic Pop Drop Lead");
+        albumMasterMenu.addItem(82, "Stay The Night - Stadium Laser Lead");
+        albumMasterMenu.addItem(83, "Your Love Is My Drug - 80s Poly Brass");
+        albumMasterMenu.addItem(84, "Album Master - Final Club Limiter FX");
+        menu.addSubMenu("13_Album Master Suite", albumMasterMenu);
         
         // User Presets
         juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
@@ -504,7 +514,7 @@ public:
             {
                 menuShowing = false;
                 if (result == 0) return;
-                if (result >= 1 && result <= 78)
+                if (result >= 1 && result <= 84)
                 {
                     if (onPresetSelected)
                         onPresetSelected(result - 1);

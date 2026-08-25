@@ -1635,6 +1635,137 @@ PresetManager::PresetManager()
     p.ampRelease = 0.05f;
     presets.push_back(p);
 
+    // 79. Tik Tok - Glitter Pulse Stab
+    p = createDefaultPreset("Tik Tok - Glitter Pulse Stab");
+    p.osc1Shape = 1.0f; // Square
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 5;
+    p.unisonDetune = 15.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = 0;
+    p.osc2Level = 0.60f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 3400.0f;
+    p.filterRes = 0.35f;
+    p.filterEnvAmt = 0.65f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.18f;
+    p.filterSustain = 0.10f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.25f;
+    p.ampSustain = 0.20f;
+    p.ampRelease = 0.12f;
+    p.fxChorusMix = 0.40f;
+    p.fxDelayTime = 250.0f;
+    p.fxDelayMix = 0.30f;
+    p.fxReverbMix = 0.25f;
+    p.trashGlossY = 0.70f;
+    presets.push_back(p);
+
+    // 80. Clarity - Pure Complextro Saw Stack
+    p = createDefaultPreset("Clarity - Pure Complextro Saw Stack");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 40.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.70f;
+    p.filterCutoff = 15000.0f;
+    p.pumpActive = 1;
+    p.pumpDepth = 0.85f;
+    p.pumpDivision = 0;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.45f;
+    p.ampSustain = 0.95f;
+    p.ampRelease = 0.35f;
+    p.fxChorusMix = 0.50f;
+    p.fxReverbMix = 0.35f;
+    p.trashGlossY = 0.65f;
+    presets.push_back(p);
+
+    // 81. Die Young - Acoustic Pop Drop Lead
+    p = createDefaultPreset("Die Young - Acoustic Pop Drop Lead");
+    p.osc1Shape = 2.0f;
+    p.osc1Octave = 1;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 5;
+    p.unisonDetune = 22.0f;
+    p.osc2Shape = 1.0f;
+    p.osc2Octave = 0;
+    p.osc2Level = 0.60f;
+    p.playMode = 1; // Mono Legato
+    p.glideTime = 40.0f;
+    p.filterCutoff = 16000.0f;
+    p.ampAttack = 0.001f;
+    p.ampRelease = 0.30f;
+    p.fxDelayTime = 234.0f;
+    p.fxDelayMix = 0.35f;
+    p.fxReverbMix = 0.30f;
+    presets.push_back(p);
+
+    // 82. Stay The Night - Stadium Laser Lead
+    p = createDefaultPreset("Stay The Night - Stadium Laser Lead");
+    p.osc1Shape = 2.0f;
+    p.osc1Octave = 1;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 32.0f;
+    p.osc2Shape = 1.0f; // Sync
+    p.osc2Octave = 0;
+    p.osc2Level = 0.70f;
+    p.oscSync = 1;
+    p.playMode = 1;
+    p.glideTime = 50.0f;
+    p.filterCutoff = 16000.0f;
+    p.ampAttack = 0.001f;
+    p.ampRelease = 0.35f;
+    p.fxDelayTime = 375.0f; // 1/8d
+    p.fxDelayMix = 0.40f;
+    p.fxReverbMix = 0.35f;
+    p.trashGlossY = 0.60f;
+    presets.push_back(p);
+
+    // 83. Your Love Is My Drug - 80s Poly Brass
+    p = createDefaultPreset("Your Love Is My Drug - 80s Poly Brass");
+    p.osc1Shape = 2.0f;
+    p.osc1Octave = 0;
+    p.osc1Level = 0.90f;
+    p.unisonCount = 5;
+    p.unisonDetune = 20.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.65f;
+    p.filterCutoff = 5200.0f;
+    p.filterRes = 0.25f;
+    p.filterEnvAmt = 0.45f;
+    p.filterAttack = 0.015f;
+    p.filterDecay = 0.35f;
+    p.filterSustain = 0.70f;
+    p.ampAttack = 0.015f;
+    p.ampDecay = 0.35f;
+    p.ampSustain = 0.80f;
+    p.ampRelease = 0.30f;
+    p.fxChorusMix = 0.50f;
+    p.fxReverbMix = 0.30f;
+    presets.push_back(p);
+
+    // 84. Album Master - Final Club Limiter FX
+    p = createDefaultPreset("Album Master - Final Club Limiter FX");
+    p.osc1Shape = 2.0f;
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 35.0f;
+    p.filterCutoff = 16000.0f;
+    p.trashGlossY = 0.85f;
+    p.fxDrive = 2.0f;
+    p.fxChorusMix = 0.40f;
+    p.fxReverbMix = 0.30f;
+    presets.push_back(p);
+
     // Populate name array
     for (const auto& preset : presets)
         presetNames.push_back(preset.name);
