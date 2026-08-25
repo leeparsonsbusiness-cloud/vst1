@@ -1202,6 +1202,154 @@ PresetManager::PresetManager()
     p.fxReverbMix = 0.75f;
     presets.push_back(p);
 
+    // 61. Right Round - Club Pulse Synth Stab (Main Hook)
+    p = createDefaultPreset("Right Round - Club Pulse Synth Stab");
+    p.osc1Shape = 1.0f; // Square
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 5;
+    p.unisonDetune = 18.0f;
+    p.osc2Shape = 2.0f; // Saw
+    p.osc2Octave = 0;
+    p.osc2Level = 0.65f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 3200.0f;
+    p.filterRes = 0.35f;
+    p.filterEnvAmt = 0.60f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.22f;
+    p.filterSustain = 0.15f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.35f;
+    p.ampSustain = 0.30f;
+    p.ampRelease = 0.15f;
+    p.fxChorusMix = 0.40f;
+    p.fxDelayTime = 238.0f; // 1/8 note sync
+    p.fxDelayMix = 0.30f;
+    p.fxReverbMix = 0.25f;
+    p.trashGlossY = 0.50f;
+    presets.push_back(p);
+
+    // 62. Right Round - Dirty Electro Slap Bass
+    p = createDefaultPreset("Right Round - Dirty Electro Slap Bass");
+    p.osc1Shape = 1.0f; // Square
+    p.osc1Octave = -1;
+    p.osc1Level = 0.95f;
+    p.osc2Shape = 2.0f; // Saw
+    p.osc2Octave = -2;
+    p.osc2Level = 0.60f;
+    p.subWave = 0; // Sine Sub
+    p.subOctave = -2;
+    p.subLevel = 0.90f;
+    p.subDrive = 0.50f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 1600.0f;
+    p.filterRes = 0.30f;
+    p.filterEnvAmt = 0.55f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.16f;
+    p.filterSustain = 0.10f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.20f;
+    p.ampSustain = 0.0f;
+    p.ampRelease = 0.08f;
+    p.playMode = 1; // Mono Legato
+    p.glideTime = 40.0f;
+    p.monoMakerActive = 1;
+    p.monoMakerFreq = 160.0f;
+    p.trashGlossX = 0.40f;
+    presets.push_back(p);
+
+    // 63. Right Round - Anthemic Octave Club Lead
+    p = createDefaultPreset("Right Round - Anthemic Octave Club Lead");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 1;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 30.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = 0;
+    p.osc2Level = 0.70f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 15000.0f;
+    p.ampAttack = 0.001f;
+    p.ampRelease = 0.30f;
+    p.fxDelayTime = 357.0f; // 1/8d
+    p.fxDelayMix = 0.35f;
+    p.fxReverbMix = 0.30f;
+    p.trashGlossY = 0.60f;
+    presets.push_back(p);
+
+    // 64. Right Round - Pumping Stadium Chords
+    p = createDefaultPreset("Right Round - Pumping Stadium Chords");
+    p.osc1Shape = 2.0f;
+    p.osc1Octave = 0;
+    p.osc1Level = 0.90f;
+    p.unisonCount = 7;
+    p.unisonDetune = 35.0f;
+    p.osc2Shape = 1.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.65f;
+    p.filterCutoff = 12000.0f;
+    p.pumpActive = 1;
+    p.pumpDepth = 0.80f;
+    p.pumpDivision = 0; // 1/4 note pump
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.45f;
+    p.ampSustain = 0.90f;
+    p.ampRelease = 0.30f;
+    p.fxChorusMix = 0.45f;
+    p.fxReverbMix = 0.35f;
+    presets.push_back(p);
+
+    // 65. Right Round - Glitch Squelch Arp (Ear Candy)
+    p = createDefaultPreset("Right Round - Glitch Squelch Arp");
+    p.osc1Shape = 1.0f; // Square
+    p.osc1Octave = 1;
+    p.osc1Level = 0.90f;
+    p.osc2Shape = 0.0f; // Sine Sync
+    p.osc2Octave = 1;
+    p.osc2Level = 0.50f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 2400.0f;
+    p.filterRes = 0.50f;
+    p.filterEnvAmt = 0.70f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.12f;
+    p.filterSustain = 0.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.18f;
+    p.ampSustain = 0.0f;
+    p.ampRelease = 0.08f;
+    p.fxDelayTime = 238.0f;
+    p.fxDelayMix = 0.35f;
+    presets.push_back(p);
+
+    // 66. Right Round - 80s Retro Analog Brass
+    p = createDefaultPreset("Right Round - 80s Retro Analog Brass");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.90f;
+    p.unisonCount = 5;
+    p.unisonDetune = 20.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.65f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 4800.0f;
+    p.filterRes = 0.25f;
+    p.filterEnvAmt = 0.40f;
+    p.filterAttack = 0.02f; // Brass swell
+    p.filterDecay = 0.40f;
+    p.filterSustain = 0.60f;
+    p.ampAttack = 0.02f;
+    p.ampDecay = 0.40f;
+    p.ampSustain = 0.75f;
+    p.ampRelease = 0.30f;
+    p.fxChorusMix = 0.50f;
+    p.fxReverbMix = 0.30f;
+    presets.push_back(p);
+
     // Populate name array
     for (const auto& preset : presets)
         presetNames.push_back(preset.name);

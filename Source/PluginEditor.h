@@ -428,6 +428,16 @@ public:
         zeddAnthemMenu.addItem(60, "Beautiful Now - White Noise Tension Sweep");
         menu.addSubMenu("09_Zedd 'Beautiful Now' Suite", zeddAnthemMenu);
         
+        // 10. Flo Rida "Right Round" Club Suite
+        juce::PopupMenu floRidaMenu;
+        floRidaMenu.addItem(61, "Right Round - Club Pulse Synth Stab");
+        floRidaMenu.addItem(62, "Right Round - Dirty Electro Slap Bass");
+        floRidaMenu.addItem(63, "Right Round - Anthemic Octave Club Lead");
+        floRidaMenu.addItem(64, "Right Round - Pumping Stadium Chords");
+        floRidaMenu.addItem(65, "Right Round - Glitch Squelch Arp");
+        floRidaMenu.addItem(66, "Right Round - 80s Retro Analog Brass");
+        menu.addSubMenu("10_Flo Rida 'Right Round' Suite", floRidaMenu);
+        
         // User Presets
         juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
                                 .getChildFile("KeshaAndZeddSynth")
@@ -474,7 +484,7 @@ public:
             {
                 menuShowing = false;
                 if (result == 0) return;
-                if (result >= 1 && result <= 60)
+                if (result >= 1 && result <= 66)
                 {
                     if (onPresetSelected)
                         onPresetSelected(result - 1);
