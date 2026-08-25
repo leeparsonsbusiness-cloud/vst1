@@ -3,10 +3,20 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 class ZeddifyEngine
 {
 public:
+    enum PatternStyle
+    {
+        Zedd16thBounce = 0,
+        AviciiAnthem = 1,
+        EurodanceRiff = 2,
+        SynthwaveRoll = 3,
+        TropicalStrum = 4
+    };
+
     struct Step
     {
         bool active = false;
@@ -17,25 +27,23 @@ public:
 
     ZeddifyEngine()
     {
-        initPattern();
+        initPatterns();
     }
 
     ~ZeddifyEngine() = default;
 
     void setSampleRate(double sRate) { sampleRate = sRate; }
     void setBpm(double bpm) { hostBpm = bpm; }
+    void setPatternStyle(int style) { currentStyle = juce::jlimit(0, 4, style); }
 
     void processMidiBlock(juce::MidiBuffer& midiMessages, bool zeddifyActive, int numSamples)
     {
-        // Handle deactivation: send note-off for any stuck note and clear state
         if (!zeddifyActive)
         {
             if (wasActive && lastTriggeredNote != -1)
             {
-                // Build a clean buffer with just the cleanup note-off plus any pass-through
                 juce::MidiBuffer cleanBuffer;
                 cleanBuffer.addEvent(juce::MidiMessage::noteOff(1, lastTriggeredNote, 0.0f), 0);
-                // Pass through all original events after the cleanup
                 for (const auto metadata : midiMessages)
                     cleanBuffer.addEvent(metadata.getMessage(), metadata.samplePosition);
                 midiMessages.swapWith(cleanBuffer);
@@ -49,7 +57,6 @@ public:
         }
         wasActive = true;
 
-        // Collect note-on/off events from the incoming buffer FIRST, without modifying it
         int newRootNote = -1;
         bool rootReleased = false;
         int releasePosition = 0;
@@ -68,7 +75,6 @@ public:
             }
         }
 
-        // Now apply state changes based on collected events
         if (newRootNote >= 0)
         {
             currentRootNote = newRootNote;
@@ -80,7 +86,6 @@ public:
             }
         }
 
-        // Build output buffer from scratch (never mutate during iteration)
         juce::MidiBuffer zeddifiedBuffer;
 
         if (rootReleased && newRootNote < 0)
@@ -107,19 +112,19 @@ public:
         int samplesPer16th = static_cast<int>(secondsPer16th * sampleRate);
         if (samplesPer16th < 10) samplesPer16th = 1000;
 
+        const auto& activePattern = patterns[static_cast<size_t>(currentStyle)];
+
         for (int s = 0; s < numSamples; ++s)
         {
             if (samplesInCurrentStep == 0)
             {
-                // Step start: Send Note Off for previous step if active
                 if (lastTriggeredNote != -1)
                 {
                     zeddifiedBuffer.addEvent(juce::MidiMessage::noteOff(1, lastTriggeredNote, 0.0f), s);
                     lastTriggeredNote = -1;
                 }
 
-                // Trigger current step
-                const auto& step = pattern[static_cast<size_t>(currentStepIndex % 64)];
+                const auto& step = activePattern[static_cast<size_t>(currentStepIndex % 64)];
                 if (step.active)
                 {
                     int noteToPlay = currentRootNote + step.semitoneOffset;
@@ -137,18 +142,19 @@ public:
             }
         }
 
-        // Replace original buffer with zeddified output
         midiMessages.swapWith(zeddifiedBuffer);
     }
 
     bool exportToMidiFile(int rootNote, const juce::File& destFile)
     {
         juce::MidiMessageSequence seq;
-        double ticksPer16th = 960.0 / 4.0; // 240 ticks per 16th note
+        double ticksPer16th = 960.0 / 4.0;
+
+        const auto& activePattern = patterns[static_cast<size_t>(currentStyle)];
 
         for (int i = 0; i < 64; ++i)
         {
-            const auto& step = pattern[static_cast<size_t>(i)];
+            const auto& step = activePattern[static_cast<size_t>(i)];
             if (step.active)
             {
                 int note = juce::jlimit(0, 127, rootNote + step.semitoneOffset);
@@ -178,87 +184,81 @@ public:
     }
 
 private:
-    void initPattern()
+    void initPatterns()
     {
-        pattern.resize(64);
+        patterns.resize(5);
+        for (int p = 0; p < 5; ++p)
+            patterns[static_cast<size_t>(p)].resize(64);
 
-        // 4-Bar Syncopated Zedd Electro-Pop Riff (64 16th steps)
-        // Bar 1: Octave bounce drive
-        pattern[0]  = { true,  0,  0.95f, 0.8f };
-        pattern[1]  = { true, 12,  0.75f, 0.8f };
-        pattern[2]  = { true,  0,  0.85f, 0.8f };
-        pattern[3]  = { true, 24,  0.90f, 0.8f };
-        pattern[4]  = { true,  7,  0.80f, 0.8f };
-        pattern[5]  = { false, 0,  0.00f, 0.0f }; // Syncopated rest
-        pattern[6]  = { true, 12,  0.85f, 0.8f };
-        pattern[7]  = { true, 24,  0.95f, 0.8f };
-        pattern[8]  = { true,  0,  0.90f, 0.8f };
-        pattern[9]  = { true, 12,  0.75f, 0.8f };
-        pattern[10] = { true,  7,  0.85f, 0.8f };
-        pattern[11] = { true, 19,  0.85f, 0.8f };
-        pattern[12] = { true, 12,  0.90f, 0.8f };
-        pattern[13] = { false, 0,  0.00f, 0.0f };
-        pattern[14] = { true, 24,  0.95f, 0.8f };
-        pattern[15] = { true, 12,  0.80f, 0.8f };
+        // Pattern 0: Zedd 16th Octave Bounce
+        auto& zedd = patterns[0];
+        for (int i = 0; i < 64; ++i)
+        {
+            int sub16 = i % 16;
+            if (sub16 == 0) zedd[static_cast<size_t>(i)] = { true, 0, 0.95f, 0.8f };
+            else if (sub16 == 1) zedd[static_cast<size_t>(i)] = { true, 12, 0.75f, 0.8f };
+            else if (sub16 == 2) zedd[static_cast<size_t>(i)] = { true, 0, 0.85f, 0.8f };
+            else if (sub16 == 3) zedd[static_cast<size_t>(i)] = { true, 24, 0.90f, 0.8f };
+            else if (sub16 == 4) zedd[static_cast<size_t>(i)] = { true, 7, 0.80f, 0.8f };
+            else if (sub16 == 5) zedd[static_cast<size_t>(i)] = { false, 0, 0.0f, 0.0f };
+            else if (sub16 == 6) zedd[static_cast<size_t>(i)] = { true, 12, 0.85f, 0.8f };
+            else if (sub16 == 7) zedd[static_cast<size_t>(i)] = { true, 24, 0.95f, 0.8f };
+            else if (sub16 == 8) zedd[static_cast<size_t>(i)] = { true, 0, 0.90f, 0.8f };
+            else if (sub16 == 9) zedd[static_cast<size_t>(i)] = { true, 12, 0.75f, 0.8f };
+            else if (sub16 == 10) zedd[static_cast<size_t>(i)] = { true, 7, 0.85f, 0.8f };
+            else if (sub16 == 11) zedd[static_cast<size_t>(i)] = { true, 19, 0.85f, 0.8f };
+            else if (sub16 == 12) zedd[static_cast<size_t>(i)] = { true, 12, 0.90f, 0.8f };
+            else if (sub16 == 13) zedd[static_cast<size_t>(i)] = { false, 0, 0.0f, 0.0f };
+            else if (sub16 == 14) zedd[static_cast<size_t>(i)] = { true, 24, 0.95f, 0.8f };
+            else if (sub16 == 15) zedd[static_cast<size_t>(i)] = { true, 12, 0.80f, 0.8f };
+        }
 
-        // Bar 2: Melodic lift (Minor/Major 3rd & 7th accents)
-        pattern[16] = { true,  3,  0.95f, 0.8f };
-        pattern[17] = { true, 15,  0.75f, 0.8f };
-        pattern[18] = { true,  3,  0.85f, 0.8f };
-        pattern[19] = { true, 27,  0.90f, 0.8f };
-        pattern[20] = { true, 10,  0.80f, 0.8f };
-        pattern[21] = { false, 0,  0.00f, 0.0f };
-        pattern[22] = { true, 15,  0.85f, 0.8f };
-        pattern[23] = { true, 27,  0.95f, 0.8f };
-        pattern[24] = { true,  3,  0.90f, 0.8f };
-        pattern[25] = { true, 15,  0.75f, 0.8f };
-        pattern[26] = { true, 10,  0.85f, 0.8f };
-        pattern[27] = { true, 22,  0.85f, 0.8f };
-        pattern[28] = { true, 15,  0.90f, 0.8f };
-        pattern[29] = { false, 0,  0.00f, 0.0f };
-        pattern[30] = { true, 27,  0.95f, 0.8f };
-        pattern[31] = { true, 15,  0.80f, 0.8f };
+        // Pattern 1: Avicii Progressive Anthem
+        auto& avicii = patterns[1];
+        static const int aviciiOffsets[16] = { 0, 0, 7, 7, 12, 12, 10, 7, 5, 5, 7, 7, 12, 15, 12, 7 };
+        for (int i = 0; i < 64; ++i)
+        {
+            int sub16 = i % 16;
+            avicii[static_cast<size_t>(i)] = { true, aviciiOffsets[sub16], 0.88f, 0.85f };
+        }
 
-        // Bar 3: Sub-octave dive & high syncopation
-        pattern[32] = { true,  5,  0.95f, 0.8f };
-        pattern[33] = { true, 17,  0.75f, 0.8f };
-        pattern[34] = { true,  5,  0.85f, 0.8f };
-        pattern[35] = { true, 29,  0.90f, 0.8f };
-        pattern[36] = { true, 12,  0.80f, 0.8f };
-        pattern[37] = { false, 0,  0.00f, 0.0f };
-        pattern[38] = { true, 17,  0.85f, 0.8f };
-        pattern[39] = { true, 29,  0.95f, 0.8f };
-        pattern[40] = { true,  5,  0.90f, 0.8f };
-        pattern[41] = { true, 17,  0.75f, 0.8f };
-        pattern[42] = { true, 12,  0.85f, 0.8f };
-        pattern[43] = { true, 24,  0.85f, 0.8f };
-        pattern[44] = { true, 17,  0.90f, 0.8f };
-        pattern[45] = { false, 0,  0.00f, 0.0f };
-        pattern[46] = { true, 29,  0.95f, 0.8f };
-        pattern[47] = { true, 17,  0.80f, 0.8f };
+        // Pattern 2: Eurodance Offbeat Riff
+        auto& euro = patterns[2];
+        for (int i = 0; i < 64; ++i)
+        {
+            int sub16 = i % 4;
+            if (sub16 == 0) euro[static_cast<size_t>(i)] = { true, 0, 0.95f, 0.75f };
+            else if (sub16 == 2) euro[static_cast<size_t>(i)] = { true, 12, 0.90f, 0.75f };
+            else euro[static_cast<size_t>(i)] = { false, 0, 0.0f, 0.0f };
+        }
 
-        // Bar 4: Turnaround roll (Rapid arpeggiated fill)
-        pattern[48] = { true,  7,  0.95f, 0.8f };
-        pattern[49] = { true, 19,  0.85f, 0.8f };
-        pattern[50] = { true, 12,  0.90f, 0.8f };
-        pattern[51] = { true, 24,  0.90f, 0.8f };
-        pattern[52] = { true, 15,  0.95f, 0.8f };
-        pattern[53] = { true, 27,  0.95f, 0.8f };
-        pattern[54] = { true, 19,  0.95f, 0.8f };
-        pattern[55] = { true, 31,  1.00f, 0.8f };
-        pattern[56] = { true, 24,  1.00f, 0.7f };
-        pattern[57] = { true, 22,  0.95f, 0.7f };
-        pattern[58] = { true, 19,  0.90f, 0.7f };
-        pattern[59] = { true, 17,  0.85f, 0.7f };
-        pattern[60] = { true, 15,  0.80f, 0.7f };
-        pattern[61] = { true, 12,  0.75f, 0.7f };
-        pattern[62] = { true,  7,  0.70f, 0.7f };
-        pattern[63] = { true,  0,  0.65f, 0.7f };
+        // Pattern 3: Synthwave 16th Roll
+        auto& synthwave = patterns[3];
+        for (int i = 0; i < 64; ++i)
+        {
+            int sub16 = i % 8;
+            int oct = (sub16 == 0 || sub16 == 4) ? 0 : 12;
+            float vel = (sub16 == 0 || sub16 == 4) ? 0.95f : 0.78f;
+            synthwave[static_cast<size_t>(i)] = { true, oct, vel, 0.70f };
+        }
+
+        // Pattern 4: Tropical Pop Strum
+        auto& trop = patterns[4];
+        static const int tropOffsets[16] = { 0, 7, 12, 15, -1, 0, 7, 12, -1, -1, 0, 7, 12, 15, 12, 7 };
+        for (int i = 0; i < 64; ++i)
+        {
+            int sub16 = i % 16;
+            if (tropOffsets[sub16] >= 0)
+                trop[static_cast<size_t>(i)] = { true, tropOffsets[sub16], 0.85f, 0.60f };
+            else
+                trop[static_cast<size_t>(i)] = { false, 0, 0.0f, 0.0f };
+        }
     }
 
     double sampleRate = 44100.0;
     double hostBpm = 120.0;
-    std::vector<Step> pattern;
+    int currentStyle = 0;
+    std::vector<std::vector<Step>> patterns;
 
     bool wasActive = false;
     bool playingActive = false;

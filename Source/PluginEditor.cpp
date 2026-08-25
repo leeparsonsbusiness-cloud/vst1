@@ -2,19 +2,166 @@
 #include "PluginEditor.h"
 
 // ==============================================================================
-// Analog Lab Inspired LookAndFeel Implementation
+// ModernSynthLookAndFeel (Supports 4 Distinct Luxury & Retro Themes)
 // ==============================================================================
 ModernSynthLookAndFeel::ModernSynthLookAndFeel()
 {
-    setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(0xff121318));
-    setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff1b1d26));
-    setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff333748));
-    setColour(juce::ComboBox::focusedOutlineColourId, juce::Colour(0xff00d4ff));
-    setColour(juce::ComboBox::textColourId, juce::Colour(0xffe2e5f0));
-    setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff161720));
-    setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xff00d4ff).withAlpha(0.25f));
-    setColour(juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
-    setColour(juce::PopupMenu::textColourId, juce::Colour(0xffc5cad8));
+    setTheme(0);
+}
+
+void ModernSynthLookAndFeel::setTheme(int themeIndex)
+{
+    currentTheme = juce::jlimit(0, 3, themeIndex);
+
+    if (currentTheme == CyberNeon)
+    {
+        setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(0xff090a10));
+        setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff12131f));
+        setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff302b4d));
+        setColour(juce::ComboBox::focusedOutlineColourId, juce::Colour(0xffd400ff));
+        setColour(juce::ComboBox::textColourId, juce::Colour(0xfff0e6ff));
+        setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff0f1018));
+        setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xffd400ff).withAlpha(0.3f));
+        setColour(juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
+        setColour(juce::PopupMenu::textColourId, juce::Colour(0xffdfd0f8));
+    }
+    else if (currentTheme == VintageCream)
+    {
+        setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(0xffeae7dc));
+        setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xfff8f7f2));
+        setColour(juce::ComboBox::outlineColourId, juce::Colour(0xffd8c3a5));
+        setColour(juce::ComboBox::focusedOutlineColourId, juce::Colour(0xffe85a4f));
+        setColour(juce::ComboBox::textColourId, juce::Colour(0xff2b2a29));
+        setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xfffaf8f5));
+        setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xffe85a4f).withAlpha(0.2f));
+        setColour(juce::PopupMenu::highlightedTextColourId, juce::Colour(0xff22201e));
+        setColour(juce::PopupMenu::textColourId, juce::Colour(0xff4a4846));
+    }
+    else if (currentTheme == StealthBlackout)
+    {
+        setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(0xff0a0a0b));
+        setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff141416));
+        setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff26262a));
+        setColour(juce::ComboBox::focusedOutlineColourId, juce::Colour(0xff888892));
+        setColour(juce::ComboBox::textColourId, juce::Colour(0xffcccccc));
+        setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff121214));
+        setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xff333338));
+        setColour(juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
+        setColour(juce::PopupMenu::textColourId, juce::Colour(0xffaaaaaa));
+    }
+    else // Analog Lab Luxury
+    {
+        setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(0xff121318));
+        setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff1b1d26));
+        setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff333748));
+        setColour(juce::ComboBox::focusedOutlineColourId, juce::Colour(0xff00d4ff));
+        setColour(juce::ComboBox::textColourId, juce::Colour(0xffe2e5f0));
+        setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff161720));
+        setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xff00d4ff).withAlpha(0.25f));
+        setColour(juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
+        setColour(juce::PopupMenu::textColourId, juce::Colour(0xffc5cad8));
+    }
+}
+
+juce::Colour ModernSynthLookAndFeel::getBgColour() const
+{
+    if (currentTheme == CyberNeon) return juce::Colour(0xff090a10);
+    if (currentTheme == VintageCream) return juce::Colour(0xffeae7dc);
+    if (currentTheme == StealthBlackout) return juce::Colour(0xff0a0a0b);
+    return juce::Colour(0xff111216);
+}
+
+juce::Colour ModernSynthLookAndFeel::getCardBgColour() const
+{
+    if (currentTheme == CyberNeon) return juce::Colour(0xff10111a);
+    if (currentTheme == VintageCream) return juce::Colour(0xfff5f3ec);
+    if (currentTheme == StealthBlackout) return juce::Colour(0xff131316);
+    return juce::Colour(0xff161820);
+}
+
+juce::Colour ModernSynthLookAndFeel::getCardBorderColour() const
+{
+    if (currentTheme == CyberNeon) return juce::Colour(0xff261f3d);
+    if (currentTheme == VintageCream) return juce::Colour(0xffd5cfbe);
+    if (currentTheme == StealthBlackout) return juce::Colour(0xff222226);
+    return juce::Colour(0xff242734);
+}
+
+juce::Colour ModernSynthLookAndFeel::getAccentColour(int bayIndex) const
+{
+    if (currentTheme == CyberNeon)
+    {
+        if (bayIndex == 0) return juce::Colour(0xff00f0ff);
+        if (bayIndex == 1) return juce::Colour(0xffd400ff);
+        return juce::Colour(0xffff0055);
+    }
+    if (currentTheme == VintageCream)
+    {
+        if (bayIndex == 0) return juce::Colour(0xffe85a4f);
+        if (bayIndex == 1) return juce::Colour(0xffe98074);
+        return juce::Colour(0xffd8c3a5);
+    }
+    if (currentTheme == StealthBlackout)
+    {
+        return juce::Colour(0xffaaaaaa);
+    }
+    // Analog Lab Default
+    if (bayIndex == 0) return juce::Colour(0xff00d4ff);
+    if (bayIndex == 1) return juce::Colour(0xffffaa00);
+    return juce::Colour(0xffff5500);
+}
+
+void ModernSynthLookAndFeel::drawSidePanels(juce::Graphics& g, int width, int height) const
+{
+    float panelWidth = 10.0f;
+    if (currentTheme == VintageCream)
+    {
+        // Teak Wood side panels
+        auto drawTeak = [&](float x) {
+            juce::ColourGradient grad(juce::Colour(0xffb87d4b), x, 0.0f,
+                                      juce::Colour(0xff6e4726), x + panelWidth, 0.0f, false);
+            g.setGradientFill(grad);
+            g.fillRect(x, 0.0f, panelWidth, (float) height);
+        };
+        drawTeak(0.0f);
+        drawTeak((float) (width - 10));
+    }
+    else if (currentTheme == CyberNeon)
+    {
+        // Cyber glowing carbon panels
+        auto drawCyber = [&](float x) {
+            juce::ColourGradient grad(juce::Colour(0xff1d0a30), x, 0.0f,
+                                      juce::Colour(0xff080210), x + panelWidth, 0.0f, false);
+            g.setGradientFill(grad);
+            g.fillRect(x, 0.0f, panelWidth, (float) height);
+            g.setColour(juce::Colour(0xffd400ff).withAlpha(0.6f));
+            g.drawVerticalLine(static_cast<int>(x > 5 ? x : x + panelWidth - 1), 0.0f, (float) height);
+        };
+        drawCyber(0.0f);
+        drawCyber((float) (width - 10));
+    }
+    else if (currentTheme == StealthBlackout)
+    {
+        // Matte Carbon Panels
+        g.setColour(juce::Colour(0xff16161a));
+        g.fillRect(0.0f, 0.0f, panelWidth, (float) height);
+        g.fillRect((float) (width - 10), 0.0f, panelWidth, (float) height);
+    }
+    else // Mahogany Wood Panels
+    {
+        auto drawWood = [&](float x) {
+            juce::ColourGradient woodGrad(juce::Colour(0xff452314), x, 0.0f,
+                                          juce::Colour(0xff200f07), x + panelWidth, 0.0f, false);
+            g.setGradientFill(woodGrad);
+            g.fillRect(x, 0.0f, panelWidth, (float) height);
+
+            g.setColour(juce::Colour(0xff5c301c).withAlpha(0.35f));
+            for (float ly = 12.0f; ly < height; ly += 24.0f)
+                g.drawHorizontalLine(static_cast<int>(ly), x + 1.0f, x + panelWidth - 1.0f);
+        };
+        drawWood(0.0f);
+        drawWood((float) (width - 10));
+    }
 }
 
 void ModernSynthLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
@@ -30,14 +177,14 @@ void ModernSynthLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, i
     auto rw = radius * 2.0f;
     auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-    // 1. Soft Drop Shadow
+    // 1. Drop Shadow
     g.setColour(juce::Colour(0x55000000));
     g.fillEllipse(rx + 1.0f, ry + 2.5f, rw, rw);
 
-    // 2. Outer Track Arc
+    // 2. Track Arc
     juce::Path backgroundArc;
     backgroundArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, rotaryEndAngle, true);
-    g.setColour(juce::Colour(0xff1e202a));
+    g.setColour(currentTheme == VintageCream ? juce::Colour(0xffdcd6c8) : juce::Colour(0xff1e202a));
     g.strokePath(backgroundArc, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
     // 3. Illuminated LED Value Arc
@@ -46,51 +193,48 @@ void ModernSynthLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, i
         juce::Path valueArc;
         valueArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, angle, true);
         
-        juce::ColourGradient grad(juce::Colour(0xff00d4ff), centreX - radius, centreY,
-                                  juce::Colour(0xffffaa00), centreX + radius, centreY, false);
+        juce::Colour col1 = (currentTheme == CyberNeon) ? juce::Colour(0xff00f0ff) :
+                            (currentTheme == VintageCream) ? juce::Colour(0xffe85a4f) :
+                            (currentTheme == StealthBlackout) ? juce::Colour(0xffffffff) : juce::Colour(0xff00d4ff);
+        juce::Colour col2 = (currentTheme == CyberNeon) ? juce::Colour(0xffd400ff) :
+                            (currentTheme == VintageCream) ? juce::Colour(0xffe98074) :
+                            (currentTheme == StealthBlackout) ? juce::Colour(0xff888888) : juce::Colour(0xffffaa00);
+
+        juce::ColourGradient grad(col1, centreX - radius, centreY, col2, centreX + radius, centreY, false);
         g.setGradientFill(grad);
         g.strokePath(valueArc, juce::PathStrokeType(3.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
-    // 4. Outer Dial Metallic Cap
+    // 4. Dial Cap
     auto dialRadius = radius - 4.5f;
     auto drx = centreX - dialRadius;
     auto dry = centreY - dialRadius;
     auto drw = dialRadius * 2.0f;
 
-    g.setColour(juce::Colour(0xff2a2d3b));
+    juce::Colour cap1 = (currentTheme == VintageCream) ? juce::Colour(0xfff5f3ec) : juce::Colour(0xff252834);
+    juce::Colour cap2 = (currentTheme == VintageCream) ? juce::Colour(0xffdfd9cb) : juce::Colour(0xff14151b);
+
+    juce::ColourGradient faceGrad(cap1, centreX - dialRadius, centreY - dialRadius,
+                                  cap2, centreX + dialRadius, centreY + dialRadius, false);
+    g.setGradientFill(faceGrad);
     g.fillEllipse(drx, dry, drw, drw);
 
-    juce::ColourGradient faceGrad(juce::Colour(0xff252834), centreX - dialRadius, centreY - dialRadius,
-                                  juce::Colour(0xff14151b), centreX + dialRadius, centreY + dialRadius, false);
-    g.setGradientFill(faceGrad);
-    g.fillEllipse(drx + 1.2f, dry + 1.2f, drw - 2.4f, drw - 2.4f);
+    g.setColour((currentTheme == VintageCream) ? juce::Colour(0xffc5bead) : juce::Colour(0xff3c4052).withAlpha(0.7f));
+    g.drawEllipse(drx, dry, drw, drw, 1.0f);
 
-    g.setColour(juce::Colour(0xff3c4052).withAlpha(0.7f));
-    g.drawEllipse(drx + 1.2f, dry + 1.2f, drw - 2.4f, drw - 2.4f, 1.0f);
-
-    // 5. High-Visibility Pointer Line
+    // 5. Pointer Line
     juce::Path p;
     auto pointerLength = dialRadius * 0.70f;
     auto pointerThickness = 2.2f;
     p.addRoundedRectangle(-pointerThickness * 0.5f, -dialRadius + 2.0f, pointerThickness, pointerLength, 1.0f);
     p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
     
-    g.setColour(juce::Colour(0xffffffff));
+    g.setColour((currentTheme == VintageCream) ? juce::Colour(0xffe85a4f) : juce::Colour(0xffffffff));
     g.fillPath(p);
 
-    // Center illuminated pip
-    g.setColour(juce::Colour(0xff111217));
-    g.fillEllipse(centreX - 2.5f, centreY - 2.5f, 5.0f, 5.0f);
-    g.setColour(juce::Colour(0xff00d4ff));
+    // Center Pip
+    g.setColour((currentTheme == VintageCream) ? juce::Colour(0xff22201e) : juce::Colour(0xff00d4ff));
     g.fillEllipse(centreX - 1.2f, centreY - 1.2f, 2.4f, 2.4f);
-}
-
-void ModernSynthLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
-                                              float sliderPos, float minSliderPos, float maxSliderPos,
-                                              const juce::Slider::SliderStyle style, juce::Slider& slider)
-{
-    juce::LookAndFeel_V4::drawLinearSlider(g, x, y, width, height, sliderPos, minSliderPos, maxSliderPos, style, slider);
 }
 
 void ModernSynthLookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool /*isButtonDown*/,
@@ -99,10 +243,10 @@ void ModernSynthLookAndFeel::drawComboBox(juce::Graphics& g, int width, int heig
 {
     auto bounds = juce::Rectangle<float>(0.0f, 0.0f, (float) width, (float) height);
     
-    g.setColour(juce::Colour(0xff1a1c24));
+    g.setColour(box.findColour(juce::ComboBox::backgroundColourId));
     g.fillRoundedRectangle(bounds, 4.0f);
 
-    g.setColour(box.hasKeyboardFocus(true) ? juce::Colour(0xff00d4ff) : juce::Colour(0xff2d3140));
+    g.setColour(box.hasKeyboardFocus(true) ? box.findColour(juce::ComboBox::focusedOutlineColourId) : box.findColour(juce::ComboBox::outlineColourId));
     g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
 
     // Chevron Arrow
@@ -113,7 +257,7 @@ void ModernSynthLookAndFeel::drawComboBox(juce::Graphics& g, int width, int heig
     path.lineTo(ax, ay + 2.0f);
     path.lineTo(ax + 3.0f, ay - 1.5f);
 
-    g.setColour(juce::Colour(0xff8c92a6));
+    g.setColour(currentTheme == VintageCream ? juce::Colour(0xff6e675f) : juce::Colour(0xff8c92a6));
     g.strokePath(path, juce::PathStrokeType(1.4f));
 }
 
@@ -123,10 +267,14 @@ void ModernSynthLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleBut
     auto bounds = button.getLocalBounds().toFloat().reduced(1.5f);
     bool isOn = button.getToggleState();
 
-    g.setColour(isOn ? juce::Colour(0xff222735) : (shouldDrawButtonAsHighlighted ? juce::Colour(0xff1c1e27) : juce::Colour(0xff161820)));
+    juce::Colour activeBg = (currentTheme == VintageCream) ? juce::Colour(0xfffceeed) : juce::Colour(0xff222735);
+    juce::Colour inactiveBg = (currentTheme == VintageCream) ? juce::Colour(0xffedeae1) : (shouldDrawButtonAsHighlighted ? juce::Colour(0xff1c1e27) : juce::Colour(0xff161820));
+
+    g.setColour(isOn ? activeBg : inactiveBg);
     g.fillRoundedRectangle(bounds, 4.0f);
 
-    g.setColour(isOn ? juce::Colour(0xff00d4ff) : juce::Colour(0xff2b2f3e));
+    juce::Colour activeBorder = (currentTheme == VintageCream) ? juce::Colour(0xffe85a4f) : (currentTheme == CyberNeon ? juce::Colour(0xffd400ff) : juce::Colour(0xff00d4ff));
+    g.setColour(isOn ? activeBorder : (currentTheme == VintageCream ? juce::Colour(0xffd5cfbe) : juce::Colour(0xff2b2f3e)));
     g.drawRoundedRectangle(bounds, 4.0f, isOn ? 1.4f : 1.0f);
 
     // Glowing LED pip
@@ -135,19 +283,20 @@ void ModernSynthLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleBut
     
     if (isOn)
     {
-        g.setColour(juce::Colour(0x5500d4ff));
+        g.setColour(activeBorder.withAlpha(0.35f));
         g.fillEllipse(ledX - 4.5f, ledY - 4.5f, 9.0f, 9.0f);
-        g.setColour(juce::Colour(0xff00d4ff));
+        g.setColour(activeBorder);
         g.fillEllipse(ledX - 2.5f, ledY - 2.5f, 5.0f, 5.0f);
     }
     else
     {
-        g.setColour(juce::Colour(0xff303444));
+        g.setColour(currentTheme == VintageCream ? juce::Colour(0xffb5ad9b) : juce::Colour(0xff303444));
         g.fillEllipse(ledX - 2.5f, ledY - 2.5f, 5.0f, 5.0f);
     }
 
     g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
-    g.setColour(isOn ? juce::Colour(0xffffffff) : juce::Colour(0xff8a90a4));
+    g.setColour(isOn ? (currentTheme == VintageCream ? juce::Colour(0xff22201e) : juce::Colour(0xffffffff)) 
+                     : (currentTheme == VintageCream ? juce::Colour(0xff6e675f) : juce::Colour(0xff8a90a4)));
     g.drawText(button.getButtonText(), bounds.withTrimmedLeft(18.0f), juce::Justification::centredLeft, true);
 }
 
@@ -166,12 +315,13 @@ void ModernSynthLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Butto
     g.setColour(base);
     g.fillRoundedRectangle(bounds, 4.0f);
 
-    g.setColour(shouldDrawButtonAsHighlighted ? juce::Colour(0xff00d4ff) : juce::Colour(0xff303444));
+    juce::Colour borderCol = (currentTheme == VintageCream) ? juce::Colour(0xffd5cfbe) : juce::Colour(0xff303444);
+    g.setColour(shouldDrawButtonAsHighlighted ? (currentTheme == VintageCream ? juce::Colour(0xffe85a4f) : juce::Colour(0xff00d4ff)) : borderCol);
     g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
 }
 
 // ==============================================================================
-// Plugin Editor Constructor & Setup
+// Plugin Editor Implementation
 // ==============================================================================
 KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZeddSynthAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p), dragMidiButton(p), vuMeter(p)
@@ -179,7 +329,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     setLookAndFeel(&lookAndFeel);
     setSize(860, 560);
 
-    // Header Controls
+    // 1. Preset Dropdown & Header Buttons
     setupComboBox(presetBox, presetLabel, "PRESET");
     auto& presetNames = audioProcessor.getPresetManager().getPresetNames();
     for (size_t i = 0; i < presetNames.size(); ++i)
@@ -249,13 +399,27 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
         presetBox.setText("Custom Random", juce::dontSendNotification);
     };
 
+    // Zeddify 2.0 Toggles & Style Selector
     zeddifyButton.setButtonText("ZEDDIFY");
     addAndMakeVisible(zeddifyButton);
     zeddifyAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "zeddify_active", zeddifyButton);
 
+    setupComboBox(zeddifyStyleBox, presetLabel, "");
+    zeddifyStyleBox.addItemList({"Zedd 16th", "Avicii Anthem", "Eurodance Riff", "Synthwave Roll", "Tropical Strum"}, 1);
+    zeddifyStyleAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "zeddify_style", zeddifyStyleBox);
+
     autoMasterButton.setButtonText("AUTO-MASTER");
     addAndMakeVisible(autoMasterButton);
     autoMasterAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "auto_master_active", autoMasterButton);
+
+    // Theme Switcher Dropdown
+    setupComboBox(themeBox, presetLabel, "");
+    themeBox.addItemList({"Analog Lab", "Cyber Neon", "Vintage Cream", "Stealth"}, 1);
+    themeBox.onChange = [this]() {
+        lookAndFeel.setTheme(themeBox.getSelectedItemIndex());
+        repaint();
+    };
+    themeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "ui_theme", themeBox);
 
     addAndMakeVisible(dragMidiButton);
     addAndMakeVisible(vuMeter);
@@ -270,7 +434,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     addAndMakeVisible(voiceCountLabel);
 
     // ----------------------------------------------------
-    // SECTION 1: SOUND ENGINE (Left Bay)
+    // SECTION 1: SOUND ENGINE & HYBRID LAYER (Left Bay)
     // ----------------------------------------------------
     setupSlider(osc1ShapeSlider, osc1ShapeLabel, "MORPH");
     osc1ShapeAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "osc1_shape", osc1ShapeSlider);
@@ -287,8 +451,8 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     setupSlider(filterResSlider, filterResLabel, "RESONANCE");
     filterResAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "filter_res", filterResSlider);
 
-    setupSlider(oscFmSlider, oscFmLabel, "BRIGHTNESS");
-    oscFmAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "osc_fm_depth", oscFmSlider);
+    setupSlider(layerBMixSlider, layerBMixLabel, "LAYER B MIX");
+    layerBMixAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "layer_b_mix", layerBMixSlider);
 
     setupComboBox(osc1OctaveBox, osc1OctaveLabel, "OCTAVE");
     osc1OctaveBox.addItemList({"-2 Oct", "-1 Oct", "0 Oct", "+1 Oct", "+2 Oct"}, 1);
@@ -298,13 +462,16 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     filterModeBox.addItemList({"LPF 12dB", "LPF 24dB", "BPF 12dB", "HPF 12dB", "Notch", "Formant"}, 1);
     filterModeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "filter_mode", filterModeBox);
 
+    setupComboBox(layerBTypeBox, layerBTypeLabel, "LAYER B SOUND");
+    layerBTypeBox.addItemList({"Layer B Off", "Grand Piano Strike", "Glass FM Bell", "Vocal Formant Chop", "White Noise Layer", "Vinyl Dust"}, 1);
+    layerBTypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "layer_b_type", layerBTypeBox);
+
     // ----------------------------------------------------
-    // SECTION 2: SLIDE & PERFORMANCE (Center Bay)
+    // SECTION 2: SLIDE, FLAVOR & PERFORMANCE (Center Bay)
     // ----------------------------------------------------
     slideToggle.setButtonText("SLIDE / GLIDE");
     addAndMakeVisible(slideToggle);
     slideToggle.onClick = [this]() {
-        // Toggle play mode between Mono Legato (1) and Poly (0)
         float currentMode = audioProcessor.getAPVTS().getRawParameterValue("play_mode")->load();
         float newMode = (currentMode == 0.0f) ? 1.0f : 0.0f;
         if (auto* param = audioProcessor.getAPVTS().getParameter("play_mode"))
@@ -313,6 +480,17 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
 
     setupSlider(glideTimeSlider, glideTimeLabel, "GLIDE TIME");
     glideTimeAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "glide_time", glideTimeSlider);
+
+    setupComboBox(producerFlavorBox, producerFlavorLabel, "PRODUCER FLAVOR");
+    producerFlavorBox.addItemList({"Neutral", "Zedd Crunch", "Avicii Warmth", "Max Martin Polish", "Kesha Glitter"}, 1);
+    producerFlavorAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "producer_flavor", producerFlavorBox);
+
+    setupSlider(producerFlavorIntensitySlider, producerFlavorIntensityLabel, "FLAVOR AMT");
+    producerFlavorIntensityAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "producer_flavor_intensity", producerFlavorIntensitySlider);
+
+    riserToggle.setButtonText("THE RISER / TENSION");
+    addAndMakeVisible(riserToggle);
+    riserAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "riser_active", riserToggle);
 
     setupSlider(ampAttackSlider, ampAttackLabel, "ATTACK");
     ampAttackAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_attack", ampAttackSlider);
@@ -332,12 +510,16 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     setupSlider(punchSlider, punchLabel, "PUNCH");
     punchAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "macro_punch", punchSlider);
 
-    setupComboBox(playModeBox, playModeLabel, "VOICING");
-    playModeBox.addItemList({"Poly (8 Voices)", "Mono Legato", "Mono Retrig"}, 1);
-    playModeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "play_mode", playModeBox);
+    setupComboBox(scaleRootBox, scaleRootLabel, "ROOT");
+    scaleRootBox.addItemList({"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}, 1);
+    scaleRootAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "scale_root", scaleRootBox);
+
+    setupComboBox(scaleTypeBox, scaleTypeLabel, "SCALE LOCK");
+    scaleTypeBox.addItemList({"Scale Off", "Major", "Natural Minor", "Harmonic Minor", "Dorian", "Mixolydian", "Pentatonic"}, 1);
+    scaleTypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "scale_type", scaleTypeBox);
 
     // ----------------------------------------------------
-    // SECTION 3: EFFECTS & SPACE (Right Bay)
+    // SECTION 3: EFFECTS, SPACE & ANALOG DRIFT (Right Bay)
     // ----------------------------------------------------
     setupSlider(fxDriveSlider, fxDriveLabel, "GRIT");
     fxDriveAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_drive", fxDriveSlider);
@@ -356,6 +538,9 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
 
     setupSlider(fxReverbMixSlider, fxReverbMixLabel, "REVERB MIX");
     fxReverbMixAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_reverb_mix", fxReverbMixSlider);
+
+    setupSlider(analogDriftSlider, analogDriftLabel, "VCO DRIFT");
+    analogDriftAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "analog_drift", analogDriftSlider);
 
     pumpToggle.setButtonText("SIDECHAIN PUMP");
     addAndMakeVisible(pumpToggle);
@@ -379,11 +564,9 @@ void KeshaZeddSynthAudioProcessorEditor::timerCallback()
     int activeCount = audioProcessor.getActiveVoiceCount();
     voiceCountLabel.setText(juce::String(activeCount) + " / 8", juce::dontSendNotification);
 
-    // Sync slide toggle state with play_mode (active if Mono Legato)
     float mode = audioProcessor.getAPVTS().getRawParameterValue("play_mode")->load();
     slideToggle.setToggleState(mode > 0.5f, juce::dontSendNotification);
 
-    // Sync active preset selection in combobox asynchronously
     int activePreset = static_cast<int>(audioProcessor.getAPVTS().getRawParameterValue("preset")->load());
     if (activePreset != presetBox.getSelectedItemIndex() && activePreset >= 0 && activePreset < audioProcessor.getPresetManager().getNumPresets())
     {
@@ -400,9 +583,9 @@ void KeshaZeddSynthAudioProcessorEditor::setupSlider(juce::Slider& slider, juce:
     addAndMakeVisible(slider);
 
     label.setText(text, juce::dontSendNotification);
-    label.setFont(juce::FontOptions(9.5f, juce::Font::bold));
+    label.setFont(juce::FontOptions(9.0f, juce::Font::bold));
     label.setJustificationType(juce::Justification::centred);
-    label.setColour(juce::Label::textColourId, juce::Colour(0xff8c92a6));
+    label.setColour(juce::Label::textColourId, (lookAndFeel.getTheme() == ModernSynthLookAndFeel::VintageCream) ? juce::Colour(0xff55524c) : juce::Colour(0xff8c92a6));
     addAndMakeVisible(label);
 }
 
@@ -411,9 +594,9 @@ void KeshaZeddSynthAudioProcessorEditor::setupComboBox(juce::ComboBox& box, juce
     addAndMakeVisible(box);
 
     label.setText(text, juce::dontSendNotification);
-    label.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+    label.setFont(juce::FontOptions(8.5f, juce::Font::bold));
     label.setJustificationType(juce::Justification::centredLeft);
-    label.setColour(juce::Label::textColourId, juce::Colour(0xff8c92a6));
+    label.setColour(juce::Label::textColourId, (lookAndFeel.getTheme() == ModernSynthLookAndFeel::VintageCream) ? juce::Colour(0xff55524c) : juce::Colour(0xff8c92a6));
     addAndMakeVisible(label);
 }
 
@@ -448,67 +631,55 @@ void KeshaZeddSynthAudioProcessorEditor::paint(juce::Graphics& g)
     int h = getHeight();
 
     // 1. Background
-    g.fillAll(juce::Colour(0xff111216));
+    g.fillAll(lookAndFeel.getBgColour());
 
-    // 2. Vintage Wooden Side Cheeks
-    auto drawWoodPanel = [&](float x, float width) {
-        juce::ColourGradient woodGrad(juce::Colour(0xff452314), x, 0.0f,
-                                      juce::Colour(0xff200f07), x + width, 0.0f, false);
-        g.setGradientFill(woodGrad);
-        g.fillRect(x, 0.0f, width, (float) h);
-
-        g.setColour(juce::Colour(0xff5c301c).withAlpha(0.35f));
-        for (float ly = 12.0f; ly < h; ly += 24.0f)
-            g.drawHorizontalLine(static_cast<int>(ly), x + 1.0f, x + width - 1.0f);
-    };
-
-    drawWoodPanel(0.0f, 10.0f);
-    drawWoodPanel((float) (w - 10), 10.0f);
+    // 2. Themed Side Panels (Wood, Teak, Cyber, or Carbon)
+    lookAndFeel.drawSidePanels(g, w, h);
 
     // 3. Top Header Bar
-    juce::ColourGradient headerGrad(juce::Colour(0xff1f212a), 0.0f, 0.0f,
-                                    juce::Colour(0xff14151c), 0.0f, 46.0f, false);
+    juce::ColourGradient headerGrad(lookAndFeel.getCardBgColour().brighter(0.08f), 0.0f, 0.0f,
+                                    lookAndFeel.getCardBgColour().darker(0.12f), 0.0f, 46.0f, false);
     g.setGradientFill(headerGrad);
     g.fillRect(10, 0, w - 20, 46);
 
-    g.setColour(juce::Colour(0xff2a2d3a));
+    g.setColour(lookAndFeel.getCardBorderColour());
     g.drawHorizontalLine(46, 10.0f, (float) (w - 10));
 
     // Logo Typography
     g.setFont(juce::FontOptions(17.0f, juce::Font::bold));
-    g.setColour(juce::Colour(0xffffffff));
+    g.setColour((lookAndFeel.getTheme() == ModernSynthLookAndFeel::VintageCream) ? juce::Colour(0xff22201e) : juce::Colour(0xffffffff));
     g.drawText("KZ-SYNTH", 22, 6, 95, 20, juce::Justification::centredLeft);
 
     g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
-    g.setColour(juce::Colour(0xffffaa00));
-    g.drawText("ANALOG LAB", 22, 24, 95, 12, juce::Justification::centredLeft);
+    g.setColour(lookAndFeel.getAccentColour(1));
+    g.drawText("FLAGSHIP EDITION", 22, 24, 95, 12, juce::Justification::centredLeft);
 
     // 4. Central OLED Screen Bezel Frame
     g.setColour(juce::Colour(0xff090a0e));
     g.fillRoundedRectangle(16.0f, 52.0f, (float) (w - 32), 60.0f, 5.0f);
 
-    g.setColour(juce::Colour(0xff222532));
+    g.setColour(lookAndFeel.getCardBorderColour());
     g.drawRoundedRectangle(16.0f, 52.0f, (float) (w - 32), 60.0f, 5.0f, 1.0f);
 
     // 5. Modular Section Cards
     auto drawSection = [&](int sx, int sy, int sw, int sh, const juce::String& title, const juce::Colour& accent) {
-        g.setColour(juce::Colour(0xff161820));
+        g.setColour(lookAndFeel.getCardBgColour());
         g.fillRoundedRectangle((float) sx, (float) sy, (float) sw, (float) sh, 5.0f);
         
-        g.setColour(juce::Colour(0xff242734));
+        g.setColour(lookAndFeel.getCardBorderColour());
         g.drawRoundedRectangle((float) sx, (float) sy, (float) sw, (float) sh, 5.0f, 1.0f);
         
         g.setColour(accent);
         g.fillRoundedRectangle((float) (sx + 12), (float) (sy + 10), 3.0f, 10.0f, 1.5f);
 
-        g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
-        g.setColour(juce::Colour(0xffd0d4e4));
+        g.setFont(juce::FontOptions(9.5f, juce::Font::bold));
+        g.setColour((lookAndFeel.getTheme() == ModernSynthLookAndFeel::VintageCream) ? juce::Colour(0xff22201e) : juce::Colour(0xffd0d4e4));
         g.drawText(title.toUpperCase(), sx + 20, sy + 6, sw - 30, 18, juce::Justification::centredLeft);
     };
 
-    drawSection(16, 118, 268, 430, "Sound Engine & Tone", juce::Colour(0xff00d4ff));
-    drawSection(292, 118, 276, 430, "Slide & Performance", juce::Colour(0xffffaa00));
-    drawSection(576, 118, 268, 430, "Effects & Space", juce::Colour(0xffff5500));
+    drawSection(16, 118, 268, 430, "Sound Engine & Hybrid", lookAndFeel.getAccentColour(0));
+    drawSection(292, 118, 276, 430, "Performance & Flavors", lookAndFeel.getAccentColour(1));
+    drawSection(576, 118, 268, 430, "Effects & Space", lookAndFeel.getAccentColour(2));
 }
 
 void KeshaZeddSynthAudioProcessorEditor::resized()
@@ -516,23 +687,23 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     // ----------------------------------------------------
     // Header Bar Layout (y: 0 to 46)
     // ----------------------------------------------------
-    prevPresetButton.setBounds(120, 11, 20, 24);
-    presetBox.setBounds(142, 11, 195, 24);
-    nextPresetButton.setBounds(339, 11, 20, 24);
+    prevPresetButton.setBounds(116, 11, 18, 24);
+    presetBox.setBounds(136, 11, 168, 24);
+    nextPresetButton.setBounds(306, 11, 18, 24);
 
-    savePresetButton.setBounds(365, 11, 42, 24);
-    loadPresetButton.setBounds(410, 11, 42, 24);
-    diceButton.setBounds(455, 11, 42, 24);
+    savePresetButton.setBounds(328, 11, 38, 24);
+    loadPresetButton.setBounds(368, 11, 38, 24);
+    diceButton.setBounds(408, 11, 38, 24);
 
-    zeddifyButton.setBounds(505, 11, 74, 24);
-    autoMasterButton.setBounds(583, 11, 92, 24);
-    dragMidiButton.setBounds(679, 11, 80, 24);
+    zeddifyButton.setBounds(450, 11, 64, 24);
+    zeddifyStyleBox.setBounds(516, 11, 80, 24);
 
-    masterVolLabel.setBounds(764, 2, 40, 12);
-    masterVolSlider.setBounds(764, 12, 40, 32);
+    autoMasterButton.setBounds(600, 11, 78, 24);
+    themeBox.setBounds(682, 11, 70, 24);
+    dragMidiButton.setBounds(756, 11, 62, 24);
 
-    vuMeter.setBounds(810, 12, 8, 30);
-    voiceCountLabel.setBounds(822, 12, 26, 24);
+    masterVolSlider.setBounds(820, 8, 30, 32);
+    vuMeter.setBounds(851, 10, 5, 28);
 
     // ----------------------------------------------------
     // Central OLED Screen (y: 54 to 110)
@@ -540,91 +711,107 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     audioProcessor.getVisualizer().setBounds(18, 54, getWidth() - 36, 56);
 
     // ----------------------------------------------------
-    // Section 1: Sound Engine (x: 16, y: 118, w: 268, h: 430)
+    // Section 1: Sound Engine & Hybrid Layer (x: 16, y: 118, w: 268, h: 430)
     // ----------------------------------------------------
     // Row 1 (y: 145)
-    osc1ShapeLabel.setBounds(26, 142, 72, 13);
-    osc1ShapeSlider.setBounds(26, 155, 72, 54);
+    osc1ShapeLabel.setBounds(24, 142, 74, 13);
+    osc1ShapeSlider.setBounds(24, 155, 74, 54);
 
-    unisonDetuneLabel.setBounds(112, 142, 72, 13);
-    unisonDetuneSlider.setBounds(112, 155, 72, 54);
+    unisonDetuneLabel.setBounds(112, 142, 74, 13);
+    unisonDetuneSlider.setBounds(112, 155, 74, 54);
 
-    subLevelLabel.setBounds(198, 142, 72, 13);
-    subLevelSlider.setBounds(198, 155, 72, 54);
+    subLevelLabel.setBounds(200, 142, 74, 13);
+    subLevelSlider.setBounds(200, 155, 74, 54);
 
     // Row 2 (y: 225)
-    filterCutoffLabel.setBounds(26, 222, 72, 13);
-    filterCutoffSlider.setBounds(26, 235, 72, 54);
+    filterCutoffLabel.setBounds(24, 222, 74, 13);
+    filterCutoffSlider.setBounds(24, 235, 74, 54);
 
-    filterResLabel.setBounds(112, 222, 72, 13);
-    filterResSlider.setBounds(112, 235, 72, 54);
+    filterResLabel.setBounds(112, 222, 74, 13);
+    filterResSlider.setBounds(112, 235, 74, 54);
 
-    oscFmLabel.setBounds(198, 222, 72, 13);
-    oscFmSlider.setBounds(198, 235, 72, 54);
+    layerBMixLabel.setBounds(200, 222, 74, 13);
+    layerBMixSlider.setBounds(200, 235, 74, 54);
 
     // Row 3 Dropdowns (y: 310)
-    osc1OctaveLabel.setBounds(30, 310, 105, 13);
-    osc1OctaveBox.setBounds(30, 325, 105, 22);
+    osc1OctaveLabel.setBounds(26, 308, 110, 13);
+    osc1OctaveBox.setBounds(26, 322, 110, 22);
 
-    filterModeLabel.setBounds(155, 310, 115, 13);
-    filterModeBox.setBounds(155, 325, 115, 22);
+    filterModeLabel.setBounds(150, 308, 120, 13);
+    filterModeBox.setBounds(150, 322, 120, 22);
+
+    layerBTypeLabel.setBounds(26, 360, 244, 13);
+    layerBTypeBox.setBounds(26, 375, 244, 22);
 
     // ----------------------------------------------------
-    // Section 2: Slide & Performance (x: 292, y: 118, w: 276, h: 430)
+    // Section 2: Performance & Flavors (x: 292, y: 118, w: 276, h: 430)
     // ----------------------------------------------------
-    // Prominent Slide Controls (y: 145)
-    slideToggle.setBounds(306, 145, 115, 24);
+    slideToggle.setBounds(304, 144, 105, 24);
 
-    glideTimeLabel.setBounds(430, 132, 65, 13);
-    glideTimeSlider.setBounds(430, 145, 65, 52);
+    glideTimeLabel.setBounds(415, 132, 65, 13);
+    glideTimeSlider.setBounds(415, 144, 65, 50);
 
-    playModeLabel.setBounds(306, 178, 115, 13);
-    playModeBox.setBounds(306, 192, 115, 22);
+    producerFlavorLabel.setBounds(304, 178, 120, 13);
+    producerFlavorBox.setBounds(304, 192, 120, 22);
 
-    // Amp ADSR Envelopes (y: 230)
-    ampAttackLabel.setBounds(302, 230, 56, 13);
-    ampAttackSlider.setBounds(302, 243, 56, 50);
+    producerFlavorIntensityLabel.setBounds(435, 178, 65, 13);
+    producerFlavorIntensitySlider.setBounds(435, 190, 65, 48);
 
-    ampDecayLabel.setBounds(364, 230, 56, 13);
-    ampDecaySlider.setBounds(364, 243, 56, 50);
+    riserToggle.setBounds(304, 228, 140, 24);
 
-    ampSustainLabel.setBounds(426, 230, 56, 13);
-    ampSustainSlider.setBounds(426, 243, 56, 50);
+    // Envelopes (y: 265)
+    ampAttackLabel.setBounds(300, 262, 58, 13);
+    ampAttackSlider.setBounds(300, 274, 58, 48);
 
-    ampReleaseLabel.setBounds(488, 230, 56, 13);
-    ampReleaseSlider.setBounds(488, 243, 56, 50);
+    ampDecayLabel.setBounds(362, 262, 58, 13);
+    ampDecaySlider.setBounds(362, 274, 58, 48);
 
-    // Macros (y: 310)
-    macroDropLabel.setBounds(330, 308, 85, 13);
-    macroDropSlider.setBounds(330, 322, 85, 58);
+    ampSustainLabel.setBounds(424, 262, 58, 13);
+    ampSustainSlider.setBounds(424, 274, 58, 48);
 
-    punchLabel.setBounds(435, 308, 85, 13);
-    punchSlider.setBounds(435, 322, 85, 58);
+    ampReleaseLabel.setBounds(486, 262, 58, 13);
+    ampReleaseSlider.setBounds(486, 274, 58, 48);
+
+    // Macros & Scale Lock (y: 335)
+    macroDropLabel.setBounds(304, 330, 70, 13);
+    macroDropSlider.setBounds(304, 342, 70, 52);
+
+    punchLabel.setBounds(380, 330, 70, 13);
+    punchSlider.setBounds(380, 342, 70, 52);
+
+    scaleRootLabel.setBounds(460, 330, 45, 13);
+    scaleRootBox.setBounds(460, 344, 45, 22);
+
+    scaleTypeLabel.setBounds(508, 330, 50, 13);
+    scaleTypeBox.setBounds(508, 344, 50, 22);
 
     // ----------------------------------------------------
     // Section 3: Effects & Space (x: 576, y: 118, w: 268, h: 430)
     // ----------------------------------------------------
     // Row 1 (y: 145)
-    fxDriveLabel.setBounds(586, 142, 72, 13);
-    fxDriveSlider.setBounds(586, 155, 72, 54);
+    fxDriveLabel.setBounds(584, 142, 74, 13);
+    fxDriveSlider.setBounds(584, 155, 74, 54);
 
-    fxChorusMixLabel.setBounds(672, 142, 72, 13);
-    fxChorusMixSlider.setBounds(672, 155, 72, 54);
+    fxChorusMixLabel.setBounds(672, 142, 74, 13);
+    fxChorusMixSlider.setBounds(672, 155, 74, 54);
 
-    fxDelayTimeLabel.setBounds(758, 142, 72, 13);
-    fxDelayTimeSlider.setBounds(758, 155, 72, 54);
+    fxDelayTimeLabel.setBounds(760, 142, 74, 13);
+    fxDelayTimeSlider.setBounds(760, 155, 74, 54);
 
     // Row 2 (y: 225)
-    fxDelayMixLabel.setBounds(586, 222, 72, 13);
-    fxDelayMixSlider.setBounds(586, 235, 72, 54);
+    fxDelayMixLabel.setBounds(584, 222, 74, 13);
+    fxDelayMixSlider.setBounds(584, 235, 74, 54);
 
-    fxReverbDecayLabel.setBounds(672, 222, 72, 13);
-    fxReverbDecaySlider.setBounds(672, 235, 72, 54);
+    fxReverbDecayLabel.setBounds(672, 222, 74, 13);
+    fxReverbDecaySlider.setBounds(672, 235, 74, 54);
 
-    fxReverbMixLabel.setBounds(758, 222, 72, 13);
-    fxReverbMixSlider.setBounds(758, 235, 72, 54);
+    fxReverbMixLabel.setBounds(760, 222, 74, 13);
+    fxReverbMixSlider.setBounds(760, 235, 74, 54);
 
-    // Toggles (y: 320)
-    pumpToggle.setBounds(590, 318, 115, 24);
-    monoMakerToggle.setBounds(715, 318, 115, 24);
+    // Row 3 (y: 310)
+    analogDriftLabel.setBounds(584, 308, 74, 13);
+    analogDriftSlider.setBounds(584, 322, 74, 54);
+
+    pumpToggle.setBounds(670, 318, 115, 22);
+    monoMakerToggle.setBounds(670, 346, 115, 22);
 }

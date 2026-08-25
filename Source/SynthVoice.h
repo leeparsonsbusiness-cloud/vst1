@@ -81,14 +81,14 @@ private:
     Biquad notchFilterL, notchFilterR;
 
     // Synth parameters cached from APVTS
-    float osc1Shape = 2.0f; // default Saw (2.0)
+    float osc1Shape = 2.0f;
     int osc1Octave = 0;
     float osc1DetuneCents = 0.0f;
     int unisonCount = 7;
     float unisonDetuneCents = 15.0f;
-    float osc1Level = 0.8f;
+    float osc1Level = 0.85f;
 
-    float osc2Shape = 2.0f; // default Saw
+    float osc2Shape = 2.0f;
     int osc2Octave = -1;
     float osc2DetuneCents = 5.0f;
     float osc2Level = 0.5f;
@@ -101,11 +101,22 @@ private:
     float filterEnvAmount = 0.5f;
     float filterKeyTrack = 0.0f;
     float filterLfoModAmount = 0.0f;
-    int filterMode = 0; // LPF12, LPF24, BPF, HPF, Notch, Formant
+    int filterMode = 0;
 
     int midiNote = 60;
     float noteVelocity = 0.0f;
     bool isPrepared = false;
+
+    // Analog Drift & Tape Warmth
+    float analogDriftAmt = 0.0f;
+    float driftPhase = 0.0f;
+    float driftSpeed = 0.35f;
+
+    // Layer B Hybrid Sound Stacker
+    int layerBType = 0; // 0: Off, 1: Piano, 2: Bell, 3: Vocal, 4: Noise, 5: Vinyl
+    float layerBMix = 0.0f;
+    float layerBPhase = 0.0f;
+    float layerBTime = 0.0f;
 
     // Transient Strike Attack Layer
     float transientTime = 0.0f;
@@ -130,7 +141,7 @@ private:
     float pitchDropDuration = 0.05f;
 
     // Smooth Portamento & Legato Pitch Slide
-    int glideMode = 0; // 0: Auto/Legato, 1: Always, 2: Off
+    int glideMode = 0;
     float glideTimeMs = 80.0f;
     float currentFrequency = 440.0f;
     float targetFrequency = 440.0f;
@@ -159,7 +170,7 @@ private:
     // Host Transport Info
     double hostBpm = 120.0;
 
-    // Vowel Formant Filter morph and parallel SVFs
+    // Formants
     float formantMorph = 0.0f;
     juce::dsp::StateVariableTPTFilter<float> formantF1L, formantF1R;
     juce::dsp::StateVariableTPTFilter<float> formantF2L, formantF2R;

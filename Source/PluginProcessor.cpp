@@ -2,35 +2,28 @@
 #include "PluginEditor.h"
 
 KeshaZeddSynthAudioProcessor::KeshaZeddSynthAudioProcessor()
-    : AudioProcessor(BusesProperties()
-                     .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+    : AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       apvts(*this, nullptr, "Parameters", createParameterLayout())
 {
     presetManager.setAPVTS(&apvts);
 
-    synth.clearVoices();
+    // Create 8 Polyphonic Synth Voices with 7-Voice Stereo Unison each
     for (int i = 0; i < 8; ++i)
         synth.addVoice(new SynthVoice());
 
-    synth.clearSounds();
     synth.addSound(new SynthSound());
 }
 
-KeshaZeddSynthAudioProcessor::~KeshaZeddSynthAudioProcessor()
-{
-}
+KeshaZeddSynthAudioProcessor::~KeshaZeddSynthAudioProcessor() = default;
 
 void KeshaZeddSynthAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     synth.setCurrentPlaybackSampleRate(sampleRate);
-
-    // Prepare voices with 3 channels to accommodate the mono sub anchor in channel 2
+    
     for (int i = 0; i < synth.getNumVoices(); ++i)
     {
         if (auto* voice = dynamic_cast<SynthVoice*>(synth.getVoice(i)))
-        {
-            voice->prepareToPlay(sampleRate, samplesPerBlock, 3);
-        }
+            voice->prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels());
     }
 
     juce::dsp::ProcessSpec spec;
@@ -40,12 +33,22 @@ void KeshaZeddSynthAudioProcessor::prepareToPlay(double sampleRate, int samplesP
 
     postFX.prepare(spec);
     autoMaster.prepare(spec);
+    sampleLayer.setSampleRate(sampleRate);
     expandedFX.prepare(spec);
+    producerFlavor.prepare(spec);
+    riserEngine.prepare(sampleRate);
+
     zeddifyEngine.setSampleRate(sampleRate);
+
+    heldNotes.clear();
+    activeLegatoNote = -1;
+    lastMidiNoteNumber = -1;
 }
 
 void KeshaZeddSynthAudioProcessor::releaseResources()
 {
+    postFX.reset();
+    autoMaster.reset();
 }
 
 bool KeshaZeddSynthAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -60,71 +63,80 @@ bool KeshaZeddSynthAudioProcessor::isBusesLayoutSupported(const BusesLayout& lay
 void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
+    auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    for (auto i = 0; i < totalNumOutputChannels; ++i)
+    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, buffer.getNumSamples());
 
-    // Get host playhead positioning
-    double bpm = 120.0;
-    double timeInSeconds = 0.0;
-    double ppqPosition = 0.0;
-    bool isPlaying = false;
-    
-    if (auto* playHead = getPlayHead())
-    {
-        if (auto positionInfo = playHead->getPosition())
-        {
-            bpm = positionInfo->getBpm().hasValue() ? *(positionInfo->getBpm()) : 120.0;
-            timeInSeconds = positionInfo->getTimeInSeconds().hasValue() ? *(positionInfo->getTimeInSeconds()) : 0.0;
-            ppqPosition = positionInfo->getPpqPosition().hasValue() ? *(positionInfo->getPpqPosition()) : 0.0;
-            isPlaying = positionInfo->getIsPlaying();
-        }
-    }
-
-    // Update voice parameters from APVTS
-    int activeCount = 0;
+    // Count currently active voices for UI readout
+    int currentActiveVoices = 0;
     for (int i = 0; i < synth.getNumVoices(); ++i)
     {
         if (auto* voice = dynamic_cast<SynthVoice*>(synth.getVoice(i)))
         {
-            voice->setHostInfo(bpm);
-            voice->updateParameters(apvts);
             if (voice->isVoiceActive())
-                activeCount++;
+                currentActiveVoices++;
         }
     }
-    activeVoiceCount.store(activeCount);
+    activeVoiceCount.store(currentActiveVoices);
 
-    bool zeddifyActive = apvts.getRawParameterValue("zeddify_active")->load() > 0.5f;
-    bool autoMasterActive = apvts.getRawParameterValue("auto_master_active")->load() > 0.5f;
-    float autoMasterIntensity = apvts.getRawParameterValue("auto_master_intensity")->load();
+    // Query Host Playhead info (BPM, transport position)
+    double bpm = 120.0;
+    double timeInSeconds = 0.0;
+    double ppqPosition = 0.0;
+    bool isPlaying = false;
 
-    bool chordMode = apvts.getRawParameterValue("chord_mode")->load() > 0.5f;
-    int chordType = static_cast<int>(apvts.getRawParameterValue("chord_type")->load());
-    int playMode = static_cast<int>(apvts.getRawParameterValue("play_mode")->load());
-    float glideTime = apvts.getRawParameterValue("glide_time")->load();
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto position = playHead->getPosition())
+        {
+            if (position->getBpm().hasValue())
+                bpm = *position->getBpm();
+            if (position->getTimeInSeconds().hasValue())
+                timeInSeconds = *position->getTimeInSeconds();
+            if (position->getPpqPosition().hasValue())
+                ppqPosition = *position->getPpqPosition();
+            isPlaying = position->getIsPlaying();
+        }
+    }
 
-    int arpMode = static_cast<int>(apvts.getRawParameterValue("arp_mode")->load());
-    int arpRate = static_cast<int>(apvts.getRawParameterValue("arp_rate")->load());
-    int arpOctaves = static_cast<int>(apvts.getRawParameterValue("arp_octaves")->load());
-    float arpSwing = apvts.getRawParameterValue("arp_swing")->load();
-    float arpGate = apvts.getRawParameterValue("arp_gate")->load();
-
-    arpeggiator.setMode(arpMode);
-    arpeggiator.setRate(arpRate);
-    arpeggiator.setOctaves(arpOctaves);
-    arpeggiator.setSwing(arpSwing);
-    arpeggiator.setGate(arpGate);
-    arpeggiator.processMidiBlock(midiMessages, getSampleRate(), bpm, buffer.getNumSamples());
-
+    // Pass Host BPM to SynthVoices, PostFX & Zeddify Engine
+    for (int i = 0; i < synth.getNumVoices(); ++i)
+    {
+        if (auto* voice = dynamic_cast<SynthVoice*>(synth.getVoice(i)))
+        {
+            voice->updateParameters(apvts);
+            voice->setHostInfo(bpm);
+        }
+    }
     zeddifyEngine.setBpm(bpm);
+
+    // Update Zeddify Pattern Style
+    int zeddStyle = static_cast<int>(apvts.getRawParameterValue("zeddify_style")->load());
+    zeddifyEngine.setPatternStyle(zeddStyle);
+
+    // 1. Smart Key & Scale Lock + Chord Strummer
+    int scaleRoot = static_cast<int>(apvts.getRawParameterValue("scale_root")->load());
+    int scaleType = static_cast<int>(apvts.getRawParameterValue("scale_type")->load());
+    float strumMs = apvts.getRawParameterValue("chord_strum_ms")->load();
+    scaleManager.processMidi(midiMessages, scaleRoot, scaleType, strumMs, getSampleRate(), buffer.getNumSamples());
+
+    // 2. Process Zeddify Algorithmic Melody Engine on incoming MIDI
+    bool zeddifyActive = apvts.getRawParameterValue("zeddify_active")->load() > 0.5f;
     zeddifyEngine.processMidiBlock(midiMessages, zeddifyActive, buffer.getNumSamples());
 
-    if (chordMode)
-        playMode = 0; // Force Poly mode if Chord Engine is active
+    // 3. Process Arpeggiator on MIDI
+    int arpMode = static_cast<int>(apvts.getRawParameterValue("arp_mode")->load());
+    arpeggiator.setMode(arpMode);
+    arpeggiator.processMidiBlock(midiMessages, getSampleRate(), bpm, buffer.getNumSamples());
 
-    // 1. MIDI Chord Engine Transformation
+    int playMode = static_cast<int>(apvts.getRawParameterValue("play_mode")->load());
+    float glideTime = apvts.getRawParameterValue("glide_time")->load();
+    bool chordMode = apvts.getRawParameterValue("chord_mode")->load() > 0.5f;
+    int chordType = static_cast<int>(apvts.getRawParameterValue("chord_type")->load());
+
+    // 4. Smart Chord Stacking
     juce::MidiBuffer processedMidi;
     if (chordMode)
     {
@@ -132,21 +144,17 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         {
             auto message = metadata.getMessage();
             auto samplePos = metadata.samplePosition;
-            
+
             if (message.isNoteOn() || message.isNoteOff())
             {
                 int root = message.getNoteNumber();
-                float vel = message.isNoteOn() ? message.getFloatVelocity() : 0.0f;
-                bool isMinor = (chordType == 1);
+                float vel = message.getFloatVelocity();
                 
-                int offsets[6] = {
-                    -12,                        // Sub root
-                    0,                          // Root
-                    7,                          // 5th
-                    12 + (isMinor ? 3 : 4),     // Mids (Minor or Major 3rd)
-                    19,                         // Upper 5th
-                    24 + (isMinor ? 10 : 11)    // Upper 7th
-                };
+                std::vector<int> offsets;
+                if (chordType == 0) // Major: Root, +4 (M3), +7 (P5)
+                    offsets = { 0, 4, 7 };
+                else // Minor: Root, +3 (m3), +7 (P5)
+                    offsets = { 0, 3, 7 };
                 
                 for (int offset : offsets)
                 {
@@ -171,7 +179,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         processedMidi = midiMessages;
     }
 
-    // 2. Play Mode Routing (Poly, Mono Legato, Mono Retrig)
+    // 5. Play Mode Routing (Poly, Mono Legato, Mono Retrig)
     juce::MidiBuffer finalMidi;
     if (playMode == 1) // Mono Legato
     {
@@ -301,7 +309,20 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         finalMidi = processedMidi;
     }
 
-    // 3. Render Voices into 3-channel temporary buffer (Synth in 0/1, Mono Sub in 2)
+    // 6. Check Riser Pitch Bend Offset
+    bool riserActive = apvts.getRawParameterValue("riser_active")->load() > 0.5f;
+    float riserProgress = apvts.getRawParameterValue("riser_progress")->load();
+    if (riserActive && riserProgress > 0.001f)
+    {
+        float riserSemitones = riserEngine.getPitchOffsetSemitones(riserProgress);
+        for (int i = 0; i < synth.getNumVoices(); ++i)
+        {
+            if (auto* voice = dynamic_cast<SynthVoice*>(synth.getVoice(i)))
+                voice->setPitchBend(riserSemitones);
+        }
+    }
+
+    // 7. Render Voices into 3-channel temporary buffer (Synth in 0/1, Mono Sub in 2)
     const int numSamples = buffer.getNumSamples();
     juce::AudioBuffer<float> tempBuffer(3, numSamples);
     tempBuffer.clear();
@@ -313,12 +334,10 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     if (totalNumOutputChannels > 1)
         buffer.copyFrom(1, 0, tempBuffer, 1, 0, numSamples);
 
-
-
-    // 4. Process Post FX Chain (Chorus, Delay, Reverb, Trash/Gloss, Sidechain, Mono-Maker) on buffer
+    // 8. Process Post FX Chain (Chorus, Delay, Reverb, Trash/Gloss, Sidechain, Mono-Maker)
     postFX.process(buffer, apvts, timeInSeconds, bpm, ppqPosition, isPlaying);
 
-    // 5. Mix Sub-Oscillator (Channel 2 of tempBuffer) back directly into output buffer (Stereo)
+    // 9. Mix Sub-Oscillator (Channel 2 of tempBuffer) back directly into output buffer
     float subLevel = apvts.getRawParameterValue("sub_level")->load();
     if (subLevel > 0.001f)
     {
@@ -327,23 +346,33 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
             buffer.addFrom(1, 0, tempBuffer, 2, 0, numSamples);
     }
 
-    // 6. Expanded FX Suite (Bitcrusher, Wavefolder, Phaser/Flanger)
+    // 10. Expanded FX Suite (Bitcrusher, Wavefolder, Phaser/Flanger)
     expandedFX.process(buffer, apvts);
 
-    // 7. Auto-Master One-Click Polish Stage (Smart Auto-Gain, 3-Band OTT, Sub-Lock, 4x Oversampled Soft-Clipper)
+    // 11. Producer Flavor Processing
+    int flavorIdx = static_cast<int>(apvts.getRawParameterValue("producer_flavor")->load());
+    float flavorIntensity = apvts.getRawParameterValue("producer_flavor_intensity")->load();
+    producerFlavor.process(buffer, flavorIdx, flavorIntensity);
+
+    // 12. The Riser / Buildup Processing
+    riserEngine.process(buffer, riserActive, riserProgress, bpm);
+
+    // 13. Auto-Master One-Click Polish Stage
+    bool autoMasterActive = apvts.getRawParameterValue("auto_master_active")->load() > 0.5f;
+    float autoMasterIntensity = apvts.getRawParameterValue("auto_master_intensity")->load();
     autoMaster.process(buffer, autoMasterActive, autoMasterIntensity);
 
-    // 8. Master Volume scaling
+    // 14. Master Volume scaling
     float masterVol = apvts.getRawParameterValue("master_vol")->load();
     buffer.applyGain(masterVol);
 
-    // 9. Stream to Visualizer FFT & Scope
+    // 15. Stream to Visualizer FFT & Scope
     visualizer.pushSampleBlock(buffer.getReadPointer(0), numSamples);
     float currentCutoff = apvts.getRawParameterValue("filter_cutoff")->load();
     float currentRes = apvts.getRawParameterValue("filter_res")->load();
     visualizer.setFilterCutoffAndRes(currentCutoff, currentRes);
 
-    // 10. Track Peak Levels for UI VU Meter
+    // 16. Track Peak Levels for UI VU Meter
     float peakL = buffer.getMagnitude(0, 0, numSamples);
     float peakR = (totalNumOutputChannels > 1) ? buffer.getMagnitude(1, 0, numSamples) : peakL;
     outputLevelL.store(peakL);
@@ -361,13 +390,14 @@ void KeshaZeddSynthAudioProcessor::randomizeParameters()
                 rangedParam->paramID == "master_vol" ||
                 rangedParam->paramID == "play_mode" ||
                 rangedParam->paramID == "chord_mode" ||
-                rangedParam->paramID == "chord_type")
+                rangedParam->paramID == "chord_type" ||
+                rangedParam->paramID == "ui_theme")
             {
                 continue;
             }
 
             float currentVal = rangedParam->getValue();
-            float offset = rand.nextFloat() * 0.3f - 0.15f; // ±15% range
+            float offset = rand.nextFloat() * 0.3f - 0.15f;
             float newVal = juce::jlimit(0.0f, 1.0f, currentVal + offset);
             rangedParam->setValueNotifyingHost(newVal);
         }
@@ -403,7 +433,7 @@ void KeshaZeddSynthAudioProcessor::getStateInformation(juce::MemoryBlock& destDa
 void KeshaZeddSynthAudioProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
-    if (xmlState != nullptr)
+    if (xmlState.get() != nullptr)
     {
         if (xmlState->hasTagName(apvts.state.getType()))
             apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
@@ -424,7 +454,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("master_vol", 1), "Master Volume", 0.0f, 1.0f, 0.8f));
 
     // Oscillator 1 & Unison
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc1_shape", 1), "Osc 1 Shape Morph", 0.0f, 3.0f, 2.0f)); // default Saw (2.0)
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc1_shape", 1), "Osc 1 Shape Morph", 0.0f, 3.0f, 2.0f));
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("osc1_octave", 1), "Osc 1 Octave", -2, 2, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc1_detune", 1), "Osc 1 Detune", -100.0f, 100.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc1_level", 1), "Osc 1 Level", 0.0f, 1.0f, 0.85f));
@@ -432,26 +462,26 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("unison_detune", 1), "Unison Spread", 0.0f, 100.0f, 20.0f));
 
     // Oscillator 2 & Modulations
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc2_shape", 1), "Osc 2 Shape Morph", 0.0f, 3.0f, 2.0f)); // default Saw
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc2_shape", 1), "Osc 2 Shape Morph", 0.0f, 3.0f, 2.0f));
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("osc2_octave", 1), "Osc 2 Octave", -2, 2, -1));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc2_detune", 1), "Osc 2 Detune", -100.0f, 100.0f, 5.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc2_level", 1), "Osc 2 Level", 0.0f, 1.0f, 0.5f));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc_fm_depth", 1), "FM Depth", 0.0f, 1.0f, 0.0f));
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("osc_sync", 1), "Osc Sync", 0, 1, 0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("osc_fm_depth", 1), "FM Cross Mod", 0.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("osc_sync", 1), "Osc Hard Sync", 0, 1, 0));
 
-    // Transient Selector & Shaper
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("transient_type", 1), "Transient Type", 0, 4, 0)); // 0: Click, 1: Hammer, 2: Vocal, 3: 808, 4: Pop
+    // Transient Shaper Attack Layer
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("transient_type", 1), "Transient Type", 0, 4, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("transient_level", 1), "Transient Level", 0.0f, 1.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("transient_decay", 1), "Transient Decay", 5.0f, 100.0f, 15.0f));
 
-    // Phase-Locked Mono Sub Anchor
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("sub_wave", 1), "Sub Waveform", 0, 1, 0)); // 0: Sine, 1: Square
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("sub_octave", 1), "Sub Octave", -2, -1, -1));
+    // Sub-Bass Mono Anchor
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("sub_wave", 1), "Sub Waveform", 0, 1, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("sub_octave", 1), "Sub Octave", -2, 0, -1));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("sub_level", 1), "Sub Level", 0.0f, 1.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("sub_drive", 1), "Sub Drive", 0.0f, 1.0f, 0.0f));
 
     // Advanced Filter Section
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("filter_mode", 1), "Filter Mode", 0, 5, 0)); // LP12, LP24, BP, HP, Notch, Formant
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("filter_mode", 1), "Filter Mode", 0, 5, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("filter_cutoff", 1), "Filter Cutoff", 
                                                                  juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f), 4500.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("filter_res", 1), "Filter Resonance", 0.0f, 0.99f, 0.2f));
@@ -462,12 +492,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("formant_morph", 1), "Formant Morph", 0.0f, 4.0f, 0.0f));
 
     // Dual Synced LFOs
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("lfo1_rate", 1), "LFO 1 Rate", 0, 11, 2)); // default 1/4
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("lfo1_wave", 1), "LFO 1 Waveform", 0, 4, 0)); // Sine, Tri, Saw, Sq, Random
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("lfo1_rate", 1), "LFO 1 Rate", 0, 11, 2));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("lfo1_wave", 1), "LFO 1 Waveform", 0, 4, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("lfo1_to_cutoff", 1), "LFO 1 to Cutoff", 0.0f, 1.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("lfo1_to_shape", 1), "LFO 1 to Shape", 0.0f, 1.0f, 0.0f));
 
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("lfo2_rate", 1), "LFO 2 Rate", 0, 11, 3)); // default 1/8
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("lfo2_rate", 1), "LFO 2 Rate", 0, 11, 3));
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("lfo2_wave", 1), "LFO 2 Waveform", 0, 4, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("lfo2_to_pitch", 1), "LFO 2 to Pitch", 0.0f, 1.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("lfo2_to_pan", 1), "LFO 2 to Pan", 0.0f, 1.0f, 0.0f));
@@ -480,7 +510,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("amp_sustain", 1), "Amp Sustain", 0.0f, 1.0f, 0.8f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("amp_release", 1), "Amp Release", 
                                                                  juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.5f));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("amp_decay_curve", 1), "Amp Decay Curve", 0.1f, 5.0f, 1.0f)); // 1.0 is Linear
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("amp_decay_curve", 1), "Amp Decay Curve", 0.1f, 5.0f, 1.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("filter_attack", 1), "Filter Attack", 
                                                                  juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.01f));
@@ -492,8 +522,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("filter_decay_curve", 1), "Filter Decay Curve", 0.1f, 5.0f, 1.0f));
 
     // Play Mode, Portamento & Pitch Bend Range
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("play_mode", 1), "Play Mode", 0, 2, 0)); // 0: Poly, 1: Mono Legato, 2: Mono Retrig
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("glide_mode", 1), "Glide Mode", 0, 2, 0)); // 0: Auto/Legato, 1: Always, 2: Off
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("play_mode", 1), "Play Mode", 0, 2, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("glide_mode", 1), "Glide Mode", 0, 2, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("glide_time", 1), "Glide Time", 
                                                                  juce::NormalisableRange<float>(0.0f, 2000.0f, 0.5f, 0.4f), 80.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("pitch_bend_range", 1), "Pitch Bend Range", 1.0f, 24.0f, 2.0f));
@@ -505,7 +535,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
 
     // Smart Chord Engine
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("chord_mode", 1), "Chord Mode", 0, 1, 0));
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("chord_type", 1), "Chord Type", 0, 1, 0)); // 0: Major, 1: Minor
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("chord_type", 1), "Chord Type", 0, 1, 0));
 
     // 2D Trash vs Gloss
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("trash_gloss_x", 1), "Trash (X)", 0.0f, 1.0f, 0.0f));
@@ -517,7 +547,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
 
     // Host Synced Ducking Pumper
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("pump_active", 1), "Pump Active", 0, 1, 0));
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("pump_division", 1), "Pump Division", 0, 2, 0)); // 0: 1/4, 1: 1/8, 2: 1/16
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("pump_division", 1), "Pump Division", 0, 2, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("pump_depth", 1), "Pump Depth", 0.0f, 1.0f, 0.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("pump_curve", 1), "Pump Curve", 0.1f, 5.0f, 2.0f));
 
@@ -530,9 +560,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_delay_time", 1), "Delay Time", 10.0f, 1000.0f, 350.0f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_delay_feedback", 1), "Delay Feedback", 0.0f, 0.99f, 0.4f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_delay_mix", 1), "Delay Mix", 0.0f, 1.0f, 0.35f));
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_delay_color", 1), "Delay Color", 0.0f, 1.0f, 0.5f)); // LPF cutoff morph
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_delay_color", 1), "Delay Color", 0.0f, 1.0f, 0.5f));
 
-    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_reverb_decay", 1), "Reverb Decay", 0.1f, 1.0f, 0.5f)); // roomSize mapping
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_reverb_decay", 1), "Reverb Decay", 0.1f, 1.0f, 0.5f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_reverb_damping", 1), "Reverb Damping", 0.0f, 1.0f, 0.3f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_reverb_width", 1), "Reverb Width", 0.0f, 1.0f, 0.8f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("fx_reverb_mix", 1), "Reverb Mix", 0.0f, 1.0f, 0.15f));
@@ -571,6 +601,26 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("phaser_depth", 1), "Phaser Depth", 0.0f, 1.0f, 0.5f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("phaser_feedback", 1), "Phaser Feedback", 0.0f, 0.95f, 0.3f));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("phaser_mix", 1), "Phaser Mix", 0.0f, 1.0f, 0.0f));
+
+    // ----------------------------------------------------
+    // PRODUCER SUITE EXPANSION PARAMETERS
+    // ----------------------------------------------------
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("producer_flavor", 1), "Producer Flavor", 0, 4, 0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("producer_flavor_intensity", 1), "Producer Flavor Intensity", 0.0f, 1.0f, 0.8f));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("riser_active", 1), "The Riser Active", 0, 1, 0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("riser_progress", 1), "The Riser Progress", 0.0f, 1.0f, 0.0f));
+
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("scale_root", 1), "Scale Root Key", 0, 11, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("scale_type", 1), "Scale Type Lock", 0, 6, 0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("chord_strum_ms", 1), "Chord Strum Humanize", 0.0f, 100.0f, 0.0f));
+
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("zeddify_style", 1), "Zeddify Pattern Style", 0, 4, 0));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("analog_drift", 1), "Analog VCO Drift", 0.0f, 1.0f, 0.25f));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("layer_b_type", 1), "Layer B Hybrid Type", 0, 5, 0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("layer_b_mix", 1), "Layer B Hybrid Mix", 0.0f, 1.0f, 0.0f));
+
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("ui_theme", 1), "UI Theme", 0, 3, 0));
 
     return { params.begin(), params.end() };
 }

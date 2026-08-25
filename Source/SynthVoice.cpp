@@ -5,6 +5,8 @@ SynthVoice::SynthVoice()
     for (int i = 0; i < 7; ++i)
         osc1Phases[i] = random.nextFloat() * juce::MathConstants<float>::twoPi;
     osc2Phase = random.nextFloat() * juce::MathConstants<float>::twoPi;
+    driftSpeed = 0.2f + random.nextFloat() * 0.3f;
+    driftPhase = random.nextFloat() * juce::MathConstants<float>::twoPi;
 }
 
 bool SynthVoice::canPlaySound(juce::SynthesiserSound* sound)
@@ -32,6 +34,10 @@ void SynthVoice::startNote(int midiNoteNumber, float velocity, juce::Synthesiser
     targetFrequency = targetFreq;
     lastPlayedFrequency = targetFreq;
     noteVelocity = velocity;
+
+    // Layer B reset
+    layerBTime = 0.0f;
+    layerBPhase = 0.0f;
 
     // Only randomize oscillator phases on fresh non-gliding triggers
     if (!shouldGlide || std::abs(currentFrequency - targetFrequency) < 0.1f)
@@ -160,6 +166,14 @@ void SynthVoice::updateParameters(juce::AudioProcessorValueTreeState& apvts)
     osc2Level = apvts.getRawParameterValue("osc2_level")->load();
     fmDepth = apvts.getRawParameterValue("osc_fm_depth")->load();
     oscSyncActive = apvts.getRawParameterValue("osc_sync")->load() > 0.5f;
+
+    // Analog Drift & Sound Stacker
+    if (apvts.getRawParameterValue("analog_drift") != nullptr)
+        analogDriftAmt = apvts.getRawParameterValue("analog_drift")->load();
+    if (apvts.getRawParameterValue("layer_b_type") != nullptr)
+        layerBType = static_cast<int>(apvts.getRawParameterValue("layer_b_type")->load());
+    if (apvts.getRawParameterValue("layer_b_mix") != nullptr)
+        layerBMix = apvts.getRawParameterValue("layer_b_mix")->load();
 
     // Transient selector
     transientType = static_cast<int>(apvts.getRawParameterValue("transient_type")->load());
@@ -374,9 +388,14 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             currentFrequency = targetFrequency;
         }
 
-        // Apply Pitch Bend Wheel + LFO 2 Vibrato pitch modulation (+-2 semitones)
+        // Apply Analog VCO Drift
+        driftPhase += (juce::MathConstants<float>::twoPi * driftSpeed) / static_cast<float>(currentSampleRate);
+        if (driftPhase >= juce::MathConstants<float>::twoPi) driftPhase -= juce::MathConstants<float>::twoPi;
+        float driftSemitones = std::sin(driftPhase) * (analogDriftAmt * 0.12f);
+
+        // Apply Pitch Bend Wheel + LFO 2 Vibrato + Drift pitch modulation
         float vibratoMod = lfo2Val * lfo2ToPitch * 2.0f;
-        float totalPitchOffset = pitchWheelSemitones + vibratoMod;
+        float totalPitchOffset = pitchWheelSemitones + vibratoMod + driftSemitones;
         float modulatedFreq = currentFrequency * std::pow(2.0f, totalPitchOffset / 12.0f);
 
         // Process Pitch Drop Sweep
@@ -390,6 +409,41 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             pitchDropTime += 1.0f / static_cast<float>(currentSampleRate);
         }
 
+        // Generate Layer B Hybrid Sample
+        float layerBSample = 0.0f;
+        if (layerBType > 0 && layerBMix > 0.001f)
+        {
+            if (layerBType == 1) // Grand Piano Hammer Strike
+            {
+                float pEnv = std::exp(-layerBTime / 0.8f);
+                layerBPhase += (juce::MathConstants<float>::twoPi * pitchFreq) / static_cast<float>(currentSampleRate);
+                layerBSample = (std::sin(layerBPhase) * 0.7f + std::sin(layerBPhase * 2.0f) * 0.3f + std::sin(layerBPhase * 3.0f) * 0.15f) * pEnv;
+            }
+            else if (layerBType == 2) // Glass FM Bell
+            {
+                float bEnv = std::exp(-layerBTime / 1.5f);
+                layerBPhase += (juce::MathConstants<float>::twoPi * pitchFreq) / static_cast<float>(currentSampleRate);
+                float mod = std::sin(layerBPhase * 3.5f) * 2.5f * bEnv;
+                layerBSample = std::sin(layerBPhase + mod) * bEnv;
+            }
+            else if (layerBType == 3) // Vocal Formant Chop
+            {
+                float vEnv = std::exp(-layerBTime / 0.45f);
+                layerBPhase += (juce::MathConstants<float>::twoPi * pitchFreq) / static_cast<float>(currentSampleRate);
+                layerBSample = (std::sin(layerBPhase * 2.0f) + std::sin(layerBPhase * 4.0f) * 0.5f) * vEnv;
+            }
+            else if (layerBType == 4) // White Noise
+            {
+                layerBSample = (random.nextFloat() * 2.0f - 1.0f) * 0.6f;
+            }
+            else if (layerBType == 5) // Vinyl Dust
+            {
+                float crackle = (random.nextFloat() > 0.985f) ? (random.nextFloat() * 2.0f - 1.0f) : 0.0f;
+                layerBSample = crackle * 0.8f;
+            }
+            layerBTime += 1.0f / static_cast<float>(currentSampleRate);
+        }
+
         // Generate Transient Click Layer
         float clickSample = 0.0f;
         if (transientActive && transientLevel > 0.001f)
@@ -397,34 +451,34 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             float tDecaySecs = transientDecay / 1000.0f;
             float tEnv = std::exp(-transientTime / tDecaySecs);
             
-            if (transientType == 0) // Punch Click (Highpass White Noise)
+            if (transientType == 0) // Punch Click
             {
                 float noise = random.nextFloat() * 2.0f - 1.0f;
                 float hpVal = noise - lastTransientSample;
                 lastTransientSample = noise;
                 clickSample = hpVal * tEnv * transientLevel;
             }
-            else if (transientType == 1) // Piano Hammer (Rapid pitch swept sine)
+            else if (transientType == 1) // Piano Hammer
             {
                 float pitchEnv = std::exp(-transientTime / 0.005f);
                 float freq = 4000.0f * pitchEnv + 300.0f;
                 transientPhase += (juce::MathConstants<float>::twoPi * freq) / static_cast<float>(currentSampleRate);
                 clickSample = std::sin(transientPhase) * tEnv * transientLevel;
             }
-            else if (transientType == 2) // Vocal Snap (Bandpassed voice resonant snap)
+            else if (transientType == 2) // Vocal Snap
             {
                 transientPhase += (juce::MathConstants<float>::twoPi * 1500.0f) / static_cast<float>(currentSampleRate);
                 float raw = std::sin(transientPhase) * (1.0f + 0.3f * (random.nextFloat() - 0.5f));
                 clickSample = raw * tEnv * transientLevel;
             }
-            else if (transientType == 3) // 808 Tock (Thumpy pitch swept sub pop)
+            else if (transientType == 3) // 808 Tock
             {
                 float pitchEnv = std::exp(-transientTime / 0.015f);
                 float freq = 500.0f * pitchEnv + 50.0f;
                 transientPhase += (juce::MathConstants<float>::twoPi * freq) / static_cast<float>(currentSampleRate);
                 clickSample = std::sin(transientPhase) * tEnv * transientLevel;
             }
-            else if (transientType == 4) // Analog Pop (Single cycle pulse)
+            else if (transientType == 4) // Analog Pop
             {
                 float pop = (transientTime < 0.0015f) ? 1.0f : -1.0f;
                 clickSample = pop * tEnv * transientLevel;
@@ -442,14 +496,7 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             float subFreq = pitchFreq * std::pow(2.0f, static_cast<float>(subOctave));
             float subInc = (juce::MathConstants<float>::twoPi * subFreq) / static_cast<float>(currentSampleRate);
             
-            // Sub wave: 0: Sine, 1: Square
-            float rawSub = 0.0f;
-            if (subWave == 0)
-                rawSub = std::sin(subPhase);
-            else
-                rawSub = (subPhase < juce::MathConstants<float>::pi) ? 1.0f : -1.0f;
-                
-            // Sub Drive pre-saturation
+            float rawSub = (subWave == 0) ? std::sin(subPhase) : ((subPhase < juce::MathConstants<float>::pi) ? 1.0f : -1.0f);
             rawSub = rawSub * (1.0f + subDrive * 3.0f);
             subSample = std::tanh(rawSub) * subLevel;
             
@@ -458,7 +505,7 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
                 subPhase -= juce::MathConstants<float>::twoPi;
         }
 
-        // 1. Calculate Oscillator 2 (Modulator)
+        // 1. Calculate Oscillator 2
         float osc2BaseFreq = pitchFreq * std::pow(2.0f, static_cast<float>(osc2Octave) + (osc2DetuneCents / 1200.0f));
         float osc2Inc = (juce::MathConstants<float>::twoPi * osc2BaseFreq) / static_cast<float>(currentSampleRate);
         float osc2Sample = generateMorphedSample(osc2Shape, osc2Phase) * osc2Level;
@@ -469,8 +516,6 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
 
         // 2. Calculate Oscillator 1 with 7-Voice Stereo Unison, FM, and Hard Sync
         float osc1BaseFreq = pitchFreq * std::pow(2.0f, static_cast<float>(osc1Octave) + (osc1DetuneCents / 1200.0f));
-        
-        // Modulate Osc 1 Shape with LFO 1
         float modulatedOsc1Shape = juce::jlimit(0.0f, 3.0f, osc1Shape + lfo1Val * lfo1ToShape * 3.0f);
 
         float osc1Left = 0.0f;
@@ -481,7 +526,6 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             float detuneOffset = unisonOffsets[u] * (unisonDetuneCents / 1200.0f);
             float uFreq = osc1BaseFreq * std::pow(2.0f, detuneOffset);
 
-            // Cross-FM from Osc 2
             float fmPhaseMod = osc2Sample * fmDepth * juce::MathConstants<float>::twoPi;
             float totalPhase = osc1Phases[u] + fmPhaseMod;
             while (totalPhase >= juce::MathConstants<float>::twoPi) totalPhase -= juce::MathConstants<float>::twoPi;
@@ -489,7 +533,6 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
 
             float uSample = generateMorphedSample(modulatedOsc1Shape, totalPhase);
 
-            // Apply stereo panning per unison voice
             float panL = (numUnisonVoices > 1) ? unisonPansL[u] : 0.5f;
             float panR = (numUnisonVoices > 1) ? unisonPansR[u] : 0.5f;
 
@@ -499,7 +542,6 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             float uInc = (juce::MathConstants<float>::twoPi * uFreq) / static_cast<float>(currentSampleRate);
             osc1Phases[u] += uInc;
 
-            // Oscillator Hard Sync: Reset Osc 1 phase when Osc 2 wraps around
             if (oscSyncActive && osc2Phase < osc2Inc)
                 osc1Phases[u] = 0.0f;
             else if (osc1Phases[u] >= juce::MathConstants<float>::twoPi)
@@ -510,9 +552,11 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
         osc1Left  *= (unisonNorm * osc1Level);
         osc1Right *= (unisonNorm * osc1Level);
 
-        // Mix Osc 1 + Osc 2 + Click Transient
-        float mixL = osc1Left  + osc2Sample * 0.5f + clickSample;
-        float mixR = osc1Right + osc2Sample * 0.5f + clickSample;
+        // Blend Layer A (Synth) + Layer B (Acoustic / Sound Stacker) + Click Transient
+        float bGain = layerBSample * layerBMix;
+        float aScale = 1.0f - (layerBMix * 0.4f);
+        float mixL = (osc1Left * aScale) + bGain + (osc2Sample * 0.5f) + clickSample;
+        float mixR = (osc1Right * aScale) + bGain + (osc2Sample * 0.5f) + clickSample;
 
         // 3. Dynamic Filter Processing
         float keyTrackOffset = (static_cast<float>(midiNote) - 60.0f) * (filterKeyTrack * 100.0f);
@@ -521,7 +565,6 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
         float finalCutoff = baseCutoffHz + keyTrackOffset + lfoCutoffMod + envCutoffMod;
         finalCutoff = juce::jlimit(20.0f, 20000.0f, finalCutoff);
 
-        // Apply Drive pre-saturation
         if (filterDrive > 1.01f)
         {
             mixL = std::tanh(mixL * filterDrive);
@@ -531,7 +574,7 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
         float outL = mixL;
         float outR = mixR;
 
-        if (filterMode < 4) // Ladder Filter modes (LPF12, LPF24, BPF, HPF)
+        if (filterMode < 4) // Ladder Filter
         {
             filter.setCutoffFrequencyHz(finalCutoff);
 
@@ -550,7 +593,7 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
                 filter.process(context);
             }
         }
-        else if (filterMode == 4) // Notch Filter (Dual Biquad)
+        else if (filterMode == 4) // Notch
         {
             float Q = 0.5f + filterResonance * 9.5f;
             notchFilterL.setNotch(static_cast<float>(currentSampleRate), finalCutoff, Q);
@@ -558,9 +601,8 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             outL = notchFilterL.process(mixL);
             outR = notchFilterR.process(mixR);
         }
-        else if (filterMode == 5) // Vowel Formant Filter (A - E - I - O - U morph)
+        else if (filterMode == 5) // Formant
         {
-            // Formant frequencies (Hz) for [A, E, I, O, U]
             static const float f1Table[5] = { 800.0f, 400.0f, 250.0f, 450.0f, 325.0f };
             static const float f2Table[5] = { 1200.0f, 2000.0f, 2100.0f, 800.0f, 700.0f };
             static const float f3Table[5] = { 2500.0f, 2800.0f, 3000.0f, 2500.0f, 2550.0f };
@@ -597,13 +639,13 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
             outR = vR;
         }
 
-        // 4. Apply Amp Envelope and Note Velocity
+        // 4. Amp & Velocity
         float gain = ampVal * noteVelocity;
         outL *= gain;
         outR *= gain;
 
-        // Apply LFO 2 Auto-Pan
-        float panMod = lfo2Val * lfo2ToPan * 0.5f; // -0.5 to +0.5
+        // Auto-Pan
+        float panMod = lfo2Val * lfo2ToPan * 0.5f;
         float finalPanL = juce::jlimit(0.0f, 1.0f, 0.5f - panMod);
         float finalPanR = juce::jlimit(0.0f, 1.0f, 0.5f + panMod);
 
@@ -615,7 +657,7 @@ void SynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int sta
         if (numBufferChannels > 1)
             outputBuffer.addSample(1, startSample + sample, outR);
 
-        // Mix Phase-Locked Sub-Oscillator into Channel 2 (bypasses stereo unison, chorus, widening)
+        // Sub mono anchor into channel 2
         if (numBufferChannels > 2 && subLevel > 0.001f)
             outputBuffer.addSample(2, startSample + sample, subSample * gain);
     }

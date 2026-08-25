@@ -10,7 +10,7 @@ using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
 using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
 using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
-// Drag-and-Drop MIDI Export Handle Component (Analog Lab Style Badge)
+// Drag-and-Drop MIDI Export Handle Component
 class DragMidiButton : public juce::Component
 {
 public:
@@ -29,7 +29,7 @@ public:
         g.drawRoundedRectangle(bounds, 4.0f, 1.2f);
 
         g.setColour(isHovered ? juce::Colour(0xffffaa33) : juce::Colour(0xffc5cad8));
-        g.setFont(juce::FontOptions(10.5f, juce::Font::bold));
+        g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
         g.drawText("EXPORT MIDI", bounds, juce::Justification::centred, false);
     }
 
@@ -109,7 +109,7 @@ private:
     float levelR = 0.0f;
 };
 
-// Categorized Preset Dropdown Menu Component (Robust Re-open Popup Fix)
+// Categorized Preset Dropdown Menu Component
 class PresetComboBox : public juce::ComboBox
 {
 public:
@@ -122,15 +122,8 @@ public:
     std::function<void(int)> onPresetSelected;
     std::function<void(const juce::File&)> onUserPresetSelected;
 
-    void showPopup() override
-    {
-        openPresetMenu();
-    }
-
-    void mouseDown(const juce::MouseEvent&) override
-    {
-        openPresetMenu();
-    }
+    void showPopup() override { openPresetMenu(); }
+    void mouseDown(const juce::MouseEvent&) override { openPresetMenu(); }
     
     void openPresetMenu()
     {
@@ -279,20 +272,27 @@ private:
     bool menuShowing = false;
 };
 
-// Analog Lab LookAndFeel (Brushed Gunmetal, Warm Wood Cheeks, Illuminated Knobs)
+// Modern Synth LookAndFeel with 4-Skin Theme Engine
 class ModernSynthLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
+    enum Theme
+    {
+        AnalogLab = 0,
+        CyberNeon = 1,
+        VintageCream = 2,
+        StealthBlackout = 3
+    };
+
     ModernSynthLookAndFeel();
     ~ModernSynthLookAndFeel() override = default;
+
+    void setTheme(int themeIndex);
+    int getTheme() const { return currentTheme; }
 
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                           float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
                           juce::Slider& slider) override;
-
-    void drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
-                          float sliderPos, float minSliderPos, float maxSliderPos,
-                          const juce::Slider::SliderStyle style, juce::Slider& slider) override;
 
     void drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown,
                       int buttonX, int buttonY, int buttonW, int buttonH,
@@ -304,6 +304,15 @@ public:
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,
                               const juce::Colour& backgroundColour,
                               bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+
+    juce::Colour getBgColour() const;
+    juce::Colour getCardBgColour() const;
+    juce::Colour getCardBorderColour() const;
+    juce::Colour getAccentColour(int bayIndex) const;
+    void drawSidePanels(juce::Graphics& g, int width, int height) const;
+
+private:
+    int currentTheme = 0;
 };
 
 class KeshaZeddSynthAudioProcessorEditor : public juce::AudioProcessorEditor,
@@ -333,12 +342,14 @@ private:
     juce::TextButton prevPresetButton;
     juce::TextButton nextPresetButton;
     juce::ToggleButton zeddifyButton;
+    juce::ComboBox zeddifyStyleBox;
     DragMidiButton dragMidiButton;
 
-    // Master Volume & Auto-Master
+    // Master Volume, Auto-Master & Theme
     juce::Slider masterVolSlider;
     juce::Label masterVolLabel;
     juce::ToggleButton autoMasterButton;
+    juce::ComboBox themeBox;
     VUMeterComponent vuMeter;
     juce::Label voiceCountLabel;
 
@@ -348,7 +359,7 @@ private:
     juce::TextButton loadPresetButton;
 
     // ----------------------------------------------------
-    // SECTION 1: SOUND ENGINE KNOBS (Left Bay)
+    // SECTION 1: SOUND ENGINE & HYBRID LAYER (Left Bay)
     // ----------------------------------------------------
     juce::Slider osc1ShapeSlider;
     juce::Label osc1ShapeLabel;
@@ -360,20 +371,29 @@ private:
     juce::Label filterCutoffLabel;
     juce::Slider filterResSlider;
     juce::Label filterResLabel;
-    juce::Slider oscFmSlider;
-    juce::Label oscFmLabel;
+    juce::Slider layerBMixSlider;
+    juce::Label layerBMixLabel;
 
     juce::ComboBox osc1OctaveBox;
     juce::Label osc1OctaveLabel;
     juce::ComboBox filterModeBox;
     juce::Label filterModeLabel;
+    juce::ComboBox layerBTypeBox;
+    juce::Label layerBTypeLabel;
 
     // ----------------------------------------------------
-    // SECTION 2: SLIDE & PERFORMANCE (Center Bay)
+    // SECTION 2: SLIDE, FLAVOR & PERFORMANCE (Center Bay)
     // ----------------------------------------------------
     juce::ToggleButton slideToggle;
     juce::Slider glideTimeSlider;
     juce::Label glideTimeLabel;
+
+    juce::ComboBox producerFlavorBox;
+    juce::Label producerFlavorLabel;
+    juce::Slider producerFlavorIntensitySlider;
+    juce::Label producerFlavorIntensityLabel;
+
+    juce::ToggleButton riserToggle;
 
     juce::Slider ampAttackSlider;
     juce::Label ampAttackLabel;
@@ -389,11 +409,13 @@ private:
     juce::Slider punchSlider;
     juce::Label punchLabel;
 
-    juce::ComboBox playModeBox;
-    juce::Label playModeLabel;
+    juce::ComboBox scaleRootBox;
+    juce::Label scaleRootLabel;
+    juce::ComboBox scaleTypeBox;
+    juce::Label scaleTypeLabel;
 
     // ----------------------------------------------------
-    // SECTION 3: EFFECTS & SPACE (Right Bay)
+    // SECTION 3: EFFECTS, SPACE & ANALOG DRIFT (Right Bay)
     // ----------------------------------------------------
     juce::Slider fxDriveSlider;
     juce::Label fxDriveLabel;
@@ -407,6 +429,8 @@ private:
     juce::Label fxReverbDecayLabel;
     juce::Slider fxReverbMixSlider;
     juce::Label fxReverbMixLabel;
+    juce::Slider analogDriftSlider;
+    juce::Label analogDriftLabel;
 
     juce::ToggleButton pumpToggle;
     juce::ToggleButton monoMakerToggle;
@@ -415,7 +439,9 @@ private:
     std::unique_ptr<ComboBoxAttachment> presetAttachment;
     std::unique_ptr<SliderAttachment> masterVolAttachment;
     std::unique_ptr<ButtonAttachment> zeddifyAttachment;
+    std::unique_ptr<ComboBoxAttachment> zeddifyStyleAttachment;
     std::unique_ptr<ButtonAttachment> autoMasterAttachment;
+    std::unique_ptr<ComboBoxAttachment> themeAttachment;
 
     std::unique_ptr<SliderAttachment> osc1ShapeAttachment;
     std::unique_ptr<ComboBoxAttachment> osc1OctaveAttachment;
@@ -423,17 +449,23 @@ private:
     std::unique_ptr<SliderAttachment> subLevelAttachment;
     std::unique_ptr<SliderAttachment> filterCutoffAttachment;
     std::unique_ptr<SliderAttachment> filterResAttachment;
-    std::unique_ptr<SliderAttachment> oscFmAttachment;
+    std::unique_ptr<SliderAttachment> layerBMixAttachment;
     std::unique_ptr<ComboBoxAttachment> filterModeAttachment;
+    std::unique_ptr<ComboBoxAttachment> layerBTypeAttachment;
 
     std::unique_ptr<SliderAttachment> glideTimeAttachment;
+    std::unique_ptr<ComboBoxAttachment> producerFlavorAttachment;
+    std::unique_ptr<SliderAttachment> producerFlavorIntensityAttachment;
+    std::unique_ptr<ButtonAttachment> riserAttachment;
+
     std::unique_ptr<SliderAttachment> ampAttackAttachment;
     std::unique_ptr<SliderAttachment> ampDecayAttachment;
     std::unique_ptr<SliderAttachment> ampSustainAttachment;
     std::unique_ptr<SliderAttachment> ampReleaseAttachment;
     std::unique_ptr<SliderAttachment> macroDropAttachment;
     std::unique_ptr<SliderAttachment> punchAttachment;
-    std::unique_ptr<ComboBoxAttachment> playModeAttachment;
+    std::unique_ptr<ComboBoxAttachment> scaleRootAttachment;
+    std::unique_ptr<ComboBoxAttachment> scaleTypeAttachment;
 
     std::unique_ptr<SliderAttachment> fxDriveAttachment;
     std::unique_ptr<SliderAttachment> fxChorusMixAttachment;
@@ -441,6 +473,7 @@ private:
     std::unique_ptr<SliderAttachment> fxDelayMixAttachment;
     std::unique_ptr<SliderAttachment> fxReverbDecayAttachment;
     std::unique_ptr<SliderAttachment> fxReverbMixAttachment;
+    std::unique_ptr<SliderAttachment> analogDriftAttachment;
     std::unique_ptr<ButtonAttachment> pumpAttachment;
     std::unique_ptr<ButtonAttachment> monoMakerAttachment;
 
