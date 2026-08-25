@@ -29,7 +29,7 @@ public:
         g.drawRoundedRectangle(bounds, 4.0f, 1.2f);
 
         g.setColour(isHovered ? juce::Colour(0xffffaa33) : juce::Colour(0xffc5cad8));
-        g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+        g.setFont(juce::FontOptions(10.5f, juce::Font::bold));
         g.drawText("EXPORT MIDI", bounds, juce::Justification::centred, false);
     }
 
@@ -50,7 +50,7 @@ private:
     bool isHovered = false;
 };
 
-// Stereo Peak/RMS Output VU Meter Component (Analog Lab Style LED ladder)
+// Stereo Peak/RMS Output VU Meter Component
 class VUMeterComponent : public juce::Component, private juce::Timer
 {
 public:
@@ -109,94 +109,37 @@ private:
     float levelR = 0.0f;
 };
 
-// Interactive 2D X/Y Pad Component (Analog Lab Dark Glass Style)
-class XYPad : public juce::Component
-{
-public:
-    XYPad() = default;
-    ~XYPad() override = default;
-    
-    std::function<void(float, float)> onPositionChanged;
-    
-    void setPosition(float newX, float newY)
-    {
-        xPos = juce::jlimit(0.0f, 1.0f, newX);
-        yPos = juce::jlimit(0.0f, 1.0f, newY);
-        repaint();
-    }
-    
-    float getXPosition() const { return xPos; }
-    float getYPosition() const { return yPos; }
-    
-    void paint(juce::Graphics& g) override
-    {
-        g.fillAll(juce::Colour(0xff101116));
-        
-        g.setColour(juce::Colour(0xff2b2e3c));
-        g.drawRoundedRectangle(getLocalBounds().toFloat(), 4.0f, 1.2f);
-        
-        // Draw crosshair grid lines
-        g.setColour(juce::Colour(0xff222530));
-        float dashes[2] = { 3.0f, 3.0f };
-        g.drawDashedLine(juce::Line<float>(getWidth() * 0.5f, 0.0f, getWidth() * 0.5f, getHeight()), dashes, 2);
-        g.drawDashedLine(juce::Line<float>(0.0f, getHeight() * 0.5f, getWidth(), getHeight() * 0.5f), dashes, 2);
-        
-        // Grid Labels
-        g.setColour(juce::Colour(0xff757a8e));
-        g.setFont(juce::FontOptions(9.5f, juce::Font::bold));
-        g.drawText("GRIT", 6, getHeight() / 2 - 10, 40, 10, juce::Justification::left);
-        g.drawText("TRASH", getWidth() - 46, getHeight() / 2 - 10, 40, 10, juce::Justification::right);
-        g.drawText("GLOSS", getWidth() / 2 - 20, 5, 40, 10, juce::Justification::centred);
-        g.drawText("CLEAN", getWidth() / 2 - 20, getHeight() - 14, 40, 10, juce::Justification::centred);
-
-        // Draw glowing puck
-        float thumbX = xPos * getWidth();
-        float thumbY = (1.0f - yPos) * getHeight();
-        
-        g.setColour(juce::Colour(0x33ffaa00));
-        g.fillEllipse(thumbX - 12.0f, thumbY - 12.0f, 24.0f, 24.0f);
-
-        juce::ColourGradient puckGrad(juce::Colour(0xffffaa00), thumbX - 6.0f, thumbY - 6.0f,
-                                     juce::Colour(0xffff5500), thumbX + 6.0f, thumbY + 6.0f, false);
-        g.setGradientFill(puckGrad);
-        g.fillEllipse(thumbX - 7.0f, thumbY - 7.0f, 14.0f, 14.0f);
-
-        g.setColour(juce::Colours::white);
-        g.fillEllipse(thumbX - 2.0f, thumbY - 2.0f, 4.0f, 4.0f);
-    }
-    
-    void mouseDown(const juce::MouseEvent& e) override { updatePosition(e.position); }
-    void mouseDrag(const juce::MouseEvent& e) override { updatePosition(e.position); }
-    
-private:
-    void updatePosition(juce::Point<float> p)
-    {
-        xPos = juce::jlimit(0.0f, 1.0f, p.getX() / getWidth());
-        yPos = juce::jlimit(0.0f, 1.0f, 1.0f - (p.getY() / getHeight()));
-        if (onPositionChanged)
-            onPositionChanged(xPos, yPos);
-        repaint();
-    }
-    
-    float xPos = 0.5f;
-    float yPos = 0.5f;
-};
-
-// Categorized Preset Dropdown Menu Component (Analog Lab Browser Style)
+// Categorized Preset Dropdown Menu Component (Robust Re-open Popup Fix)
 class PresetComboBox : public juce::ComboBox
 {
 public:
-    PresetComboBox() = default;
+    PresetComboBox()
+    {
+        setEditableText(false);
+    }
     ~PresetComboBox() override = default;
     
     std::function<void(int)> onPresetSelected;
     std::function<void(const juce::File&)> onUserPresetSelected;
-    
+
     void showPopup() override
     {
+        openPresetMenu();
+    }
+
+    void mouseDown(const juce::MouseEvent&) override
+    {
+        openPresetMenu();
+    }
+    
+    void openPresetMenu()
+    {
+        if (menuShowing) return;
+        menuShowing = true;
+
         juce::PopupMenu menu;
         
-        // Factory Presets
+        // 1. Basses
         juce::PopupMenu bassesMenu;
         bassesMenu.addItem(1, "Dirty Electro Saw Bass");
         bassesMenu.addItem(2, "Complextro Growl Bass");
@@ -208,6 +151,7 @@ public:
         bassesMenu.addItem(8, "Rubber Band Pluck Bass");
         menu.addSubMenu("01_Basses", bassesMenu);
         
+        // 2. Leads
         juce::PopupMenu leadsMenu;
         leadsMenu.addItem(9, "Clarity Supersaw");
         leadsMenu.addItem(10, "8-Bit Glitch Lead");
@@ -219,6 +163,7 @@ public:
         leadsMenu.addItem(16, "Eurodance Rave Saw");
         menu.addSubMenu("02_Leads", leadsMenu);
         
+        // 3. Plucks
         juce::PopupMenu plucksMenu;
         plucksMenu.addItem(17, "Zedd Punch Pluck");
         plucksMenu.addItem(18, "Trashy Pop Pluck");
@@ -229,6 +174,7 @@ public:
         plucksMenu.addItem(23, "Club Drop Pluck");
         menu.addSubMenu("03_Plucks", plucksMenu);
         
+        // 4. Keys & Chords
         juce::PopupMenu keysMenu;
         keysMenu.addItem(24, "Euphoric Pop Chords");
         keysMenu.addItem(25, "Radio Piano-Synth Hybrid");
@@ -239,6 +185,7 @@ public:
         keysMenu.addItem(30, "Velvet Neo-Pop Chords");
         menu.addSubMenu("04_Keys & Chords", keysMenu);
         
+        // 5. Pads & Textures
         juce::PopupMenu padsMenu;
         padsMenu.addItem(31, "Stadium Sidechain Swell");
         padsMenu.addItem(32, "Shimmering Pop Air");
@@ -247,6 +194,7 @@ public:
         padsMenu.addItem(35, "Euphoria Choir Wash");
         menu.addSubMenu("05_Pads & Textures", padsMenu);
         
+        // 6. Transitions & FX
         juce::PopupMenu fxMenu;
         fxMenu.addItem(36, "Hyperpop Bubble FX");
         fxMenu.addItem(37, "Tension Noise Riser");
@@ -254,6 +202,16 @@ public:
         fxMenu.addItem(39, "Downlifter Laser Fall");
         fxMenu.addItem(40, "Pre-Drop Impact");
         menu.addSubMenu("06_Transitions & FX", fxMenu);
+
+        // 7. Billboard Hits & Anthems
+        juce::PopupMenu billboardMenu;
+        billboardMenu.addItem(41, "Safe and Sound (Brass Lead)");
+        billboardMenu.addItem(42, "Beautiful Now (Zedd Anthem Lead)");
+        billboardMenu.addItem(43, "Glad You Came (Club Accordion Pluck)");
+        billboardMenu.addItem(44, "Let It Rock (Distorted Rock Lead)");
+        billboardMenu.addItem(45, "Right Round (Club Pulse Stab)");
+        billboardMenu.addItem(46, "Blow (Glitter Squelch Lead)");
+        menu.addSubMenu("07_Billboard Hits & Anthems", billboardMenu);
         
         // User Presets
         juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
@@ -299,8 +257,9 @@ public:
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
             [this, userFiles](int result)
             {
+                menuShowing = false;
                 if (result == 0) return;
-                if (result >= 1 && result <= 40)
+                if (result >= 1 && result <= 46)
                 {
                     if (onPresetSelected)
                         onPresetSelected(result - 1);
@@ -315,9 +274,12 @@ public:
                 }
             });
     }
+
+private:
+    bool menuShowing = false;
 };
 
-// Analog Lab Inspired LookAndFeel (Brushed Gunmetal, Warm Wood Cheeks, Illuminated Knobs)
+// Analog Lab LookAndFeel (Brushed Gunmetal, Warm Wood Cheeks, Illuminated Knobs)
 class ModernSynthLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
@@ -365,7 +327,7 @@ private:
     KeshaZeddSynthAudioProcessor& audioProcessor;
     ModernSynthLookAndFeel lookAndFeel;
 
-    // Header Controls & Zeddify Engine
+    // Header Controls
     PresetComboBox presetBox;
     juce::Label presetLabel;
     juce::TextButton prevPresetButton;
@@ -377,8 +339,6 @@ private:
     juce::Slider masterVolSlider;
     juce::Label masterVolLabel;
     juce::ToggleButton autoMasterButton;
-    juce::Slider autoMasterIntensitySlider;
-    juce::Label autoMasterIntensityLabel;
     VUMeterComponent vuMeter;
     juce::Label voiceCountLabel;
 
@@ -387,169 +347,102 @@ private:
     juce::TextButton savePresetButton;
     juce::TextButton loadPresetButton;
 
-    // Oscillator 1 & Unison Controls
+    // ----------------------------------------------------
+    // SECTION 1: SOUND ENGINE KNOBS (Left Bay)
+    // ----------------------------------------------------
     juce::Slider osc1ShapeSlider;
     juce::Label osc1ShapeLabel;
-    juce::ComboBox osc1OctaveBox;
-    juce::Label osc1OctaveLabel;
-    juce::Slider osc1DetuneSlider;
-    juce::Label osc1DetuneLabel;
-    juce::Slider osc1LevelSlider;
-    juce::Label osc1LevelLabel;
-    juce::ComboBox unisonCountBox;
-    juce::Label unisonCountLabel;
     juce::Slider unisonDetuneSlider;
     juce::Label unisonDetuneLabel;
-
-    // Oscillator 2 & Mod Controls
-    juce::Slider osc2ShapeSlider;
-    juce::Label osc2ShapeLabel;
-    juce::ComboBox osc2OctaveBox;
-    juce::Label osc2OctaveLabel;
-    juce::Slider osc2DetuneSlider;
-    juce::Label osc2DetuneLabel;
-    juce::Slider osc2LevelSlider;
-    juce::Label osc2LevelLabel;
-    juce::Slider oscFmSlider;
-    juce::Label oscFmLabel;
-    juce::ComboBox oscSyncBox;
-    juce::Label oscSyncLabel;
-
-    // Filter Controls
-    juce::ComboBox filterModeBox;
-    juce::Label filterModeLabel;
+    juce::Slider subLevelSlider;
+    juce::Label subLevelLabel;
     juce::Slider filterCutoffSlider;
     juce::Label filterCutoffLabel;
     juce::Slider filterResSlider;
     juce::Label filterResLabel;
-    juce::Slider filterDriveSlider;
-    juce::Label filterDriveLabel;
-    juce::Slider filterEnvAmtSlider;
-    juce::Label filterEnvAmtLabel;
-    juce::Slider filterKeyTrackSlider;
-    juce::Label filterKeyTrackLabel;
-    juce::Slider filterLfoModSlider;
-    juce::Label filterLfoModLabel;
-    juce::Slider formantMorphSlider;
-    juce::Label formantMorphLabel;
+    juce::Slider oscFmSlider;
+    juce::Label oscFmLabel;
 
-    // Filter ADSR & Curve
-    juce::Slider filterAttackSlider, filterDecaySlider, filterSustainSlider, filterReleaseSlider, filterCurveSlider;
-    juce::Label filterAttackLabel, filterDecayLabel, filterSustainLabel, filterReleaseLabel, filterCurveLabel;
+    juce::ComboBox osc1OctaveBox;
+    juce::Label osc1OctaveLabel;
+    juce::ComboBox filterModeBox;
+    juce::Label filterModeLabel;
 
-    // Amp ADSR & Curve Controls
-    juce::Slider ampAttackSlider, ampDecaySlider, ampSustainSlider, ampReleaseSlider, ampCurveSlider;
-    juce::Label ampAttackLabel, ampDecayLabel, ampSustainLabel, ampReleaseLabel, ampCurveLabel;
-
-    // LFO Modulation Bay
-    juce::ComboBox lfo1WaveBox, lfo2WaveBox;
-    juce::Label lfo1WaveLabel, lfo2WaveLabel;
-    juce::ComboBox lfo1RateBox, lfo2RateBox;
-    juce::Label lfo1RateLabel, lfo2RateLabel;
-    juce::Slider lfo1ToCutoffSlider, lfo1ToShapeSlider;
-    juce::Label lfo1ToCutoffLabel, lfo1ToShapeLabel;
-    juce::Slider lfo2ToPitchSlider, lfo2ToPanSlider;
-    juce::Label lfo2ToPitchLabel, lfo2ToPanLabel;
-
-    // Post FX Controls
-    juce::Slider fxDriveSlider;
-    juce::Label fxDriveLabel;
-    juce::Slider fxChorusRateSlider, fxChorusDepthSlider, fxChorusMixSlider;
-    juce::Label fxChorusRateLabel, fxChorusDepthLabel, fxChorusMixLabel;
-    juce::Slider fxDelayTimeSlider, fxDelayFeedbackSlider, fxDelayColorSlider, fxDelayMixSlider;
-    juce::Label fxDelayTimeLabel, fxDelayFeedbackLabel, fxDelayColorLabel, fxDelayMixLabel;
-    juce::Slider fxReverbDecaySlider, fxReverbDampingSlider, fxReverbWidthSlider, fxReverbMixSlider;
-    juce::Label fxReverbDecayLabel, fxReverbDampingLabel, fxReverbWidthLabel, fxReverbMixLabel;
-
-    // Sub Anchor Bay
-    juce::ComboBox subWaveBox, subOctaveBox;
-    juce::Label subWaveLabel, subOctaveLabel;
-    juce::Slider subLevelSlider, subDriveSlider;
-    juce::Label subLevelLabel, subDriveLabel;
-
-    // Settings & Voicing
-    juce::ComboBox playModeBox, chordModeBox, chordTypeBox, glideModeBox;
-    juce::Label playModeLabel, chordModeLabel, chordTypeLabel, glideModeLabel;
-    juce::ComboBox pitchDropActiveBox;
-    juce::Label pitchDropActiveLabel;
-    juce::Slider pitchDropOctavesSlider, pitchDropTimeSlider;
-    juce::Label pitchDropOctavesLabel, pitchDropTimeLabel;
+    // ----------------------------------------------------
+    // SECTION 2: SLIDE & PERFORMANCE (Center Bay)
+    // ----------------------------------------------------
+    juce::ToggleButton slideToggle;
     juce::Slider glideTimeSlider;
     juce::Label glideTimeLabel;
 
-    // Ducking Pumper
-    juce::ComboBox pumpActiveBox, pumpDivisionBox;
-    juce::Label pumpActiveLabel, pumpDivisionLabel;
-    juce::Slider pumpDepthSlider, pumpCurveSlider;
-    juce::Label pumpDepthLabel, pumpCurveLabel;
+    juce::Slider ampAttackSlider;
+    juce::Label ampAttackLabel;
+    juce::Slider ampDecaySlider;
+    juce::Label ampDecayLabel;
+    juce::Slider ampSustainSlider;
+    juce::Label ampSustainLabel;
+    juce::Slider ampReleaseSlider;
+    juce::Label ampReleaseLabel;
 
-    // Mono Maker
-    juce::ComboBox monoMakerActiveBox;
-    juce::Label monoMakerActiveLabel;
-    juce::Slider monoMakerFreqSlider;
-    juce::Label monoMakerFreqLabel;
+    juce::Slider macroDropSlider;
+    juce::Label macroDropLabel;
+    juce::Slider punchSlider;
+    juce::Label punchLabel;
 
-    // Transient Shaper Bay
-    juce::ComboBox transientTypeBox;
-    juce::Label transientTypeLabel;
-    juce::Slider clickLevelSlider, transientDecaySlider;
-    juce::Label clickLevelLabel, transientDecayLabel;
+    juce::ComboBox playModeBox;
+    juce::Label playModeLabel;
 
-    // Interactive 2D Pad (Trash vs Gloss)
-    XYPad trashGlossPad;
+    // ----------------------------------------------------
+    // SECTION 3: EFFECTS & SPACE (Right Bay)
+    // ----------------------------------------------------
+    juce::Slider fxDriveSlider;
+    juce::Label fxDriveLabel;
+    juce::Slider fxChorusMixSlider;
+    juce::Label fxChorusMixLabel;
+    juce::Slider fxDelayTimeSlider;
+    juce::Label fxDelayTimeLabel;
+    juce::Slider fxDelayMixSlider;
+    juce::Label fxDelayMixLabel;
+    juce::Slider fxReverbDecaySlider;
+    juce::Label fxReverbDecayLabel;
+    juce::Slider fxReverbMixSlider;
+    juce::Label fxReverbMixLabel;
 
-    // Macro Controls
-    juce::Slider macroDropSlider, punchSlider, gritSlider, spaceSlider, widthSlider;
-    juce::Label macroDropLabel, punchLabel, gritLabel, spaceLabel, widthLabel;
+    juce::ToggleButton pumpToggle;
+    juce::ToggleButton monoMakerToggle;
 
     // Parameter Attachments
     std::unique_ptr<ComboBoxAttachment> presetAttachment;
     std::unique_ptr<SliderAttachment> masterVolAttachment;
     std::unique_ptr<ButtonAttachment> zeddifyAttachment;
     std::unique_ptr<ButtonAttachment> autoMasterAttachment;
-    std::unique_ptr<SliderAttachment> autoMasterIntensityAttachment;
 
     std::unique_ptr<SliderAttachment> osc1ShapeAttachment;
-    std::unique_ptr<ComboBoxAttachment> osc1OctaveAttachment, unisonCountAttachment;
-    std::unique_ptr<SliderAttachment> osc1DetuneAttachment, osc1LevelAttachment, unisonDetuneAttachment;
-
-    std::unique_ptr<SliderAttachment> osc2ShapeAttachment;
-    std::unique_ptr<ComboBoxAttachment> osc2OctaveAttachment;
-    std::unique_ptr<SliderAttachment> osc2DetuneAttachment, osc2LevelAttachment, oscFmAttachment;
-    std::unique_ptr<ComboBoxAttachment> oscSyncAttachment;
-
+    std::unique_ptr<ComboBoxAttachment> osc1OctaveAttachment;
+    std::unique_ptr<SliderAttachment> unisonDetuneAttachment;
+    std::unique_ptr<SliderAttachment> subLevelAttachment;
+    std::unique_ptr<SliderAttachment> filterCutoffAttachment;
+    std::unique_ptr<SliderAttachment> filterResAttachment;
+    std::unique_ptr<SliderAttachment> oscFmAttachment;
     std::unique_ptr<ComboBoxAttachment> filterModeAttachment;
-    std::unique_ptr<SliderAttachment> filterCutoffAttachment, filterResAttachment, filterDriveAttachment, filterEnvAmtAttachment, filterKeyTrackAttachment, filterLfoModAttachment, formantMorphAttachment;
-    std::unique_ptr<SliderAttachment> filterAttackAttachment, filterDecayAttachment, filterSustainAttachment, filterReleaseAttachment, filterCurveAttachment;
 
-    std::unique_ptr<SliderAttachment> ampAttackAttachment, ampDecayAttachment, ampSustainAttachment, ampReleaseAttachment, ampCurveAttachment;
-
-    std::unique_ptr<ComboBoxAttachment> lfo1WaveAttachment, lfo1RateAttachment, lfo2WaveAttachment, lfo2RateAttachment;
-    std::unique_ptr<SliderAttachment> lfo1ToCutoffAttachment, lfo1ToShapeAttachment, lfo2ToPitchAttachment, lfo2ToPanAttachment;
+    std::unique_ptr<SliderAttachment> glideTimeAttachment;
+    std::unique_ptr<SliderAttachment> ampAttackAttachment;
+    std::unique_ptr<SliderAttachment> ampDecayAttachment;
+    std::unique_ptr<SliderAttachment> ampSustainAttachment;
+    std::unique_ptr<SliderAttachment> ampReleaseAttachment;
+    std::unique_ptr<SliderAttachment> macroDropAttachment;
+    std::unique_ptr<SliderAttachment> punchAttachment;
+    std::unique_ptr<ComboBoxAttachment> playModeAttachment;
 
     std::unique_ptr<SliderAttachment> fxDriveAttachment;
-    std::unique_ptr<SliderAttachment> fxChorusRateAttachment, fxChorusDepthAttachment, fxChorusMixAttachment;
-    std::unique_ptr<SliderAttachment> fxDelayTimeAttachment, fxDelayFeedbackAttachment, fxDelayColorAttachment, fxDelayMixAttachment;
-    std::unique_ptr<SliderAttachment> fxReverbDecayAttachment, fxReverbDampingAttachment, fxReverbWidthAttachment, fxReverbMixAttachment;
-
-    std::unique_ptr<ComboBoxAttachment> subWaveAttachment, subOctaveAttachment;
-    std::unique_ptr<SliderAttachment> subLevelAttachment, subDriveAttachment;
-
-    std::unique_ptr<ComboBoxAttachment> playModeAttachment, chordModeAttachment, chordTypeAttachment, glideModeAttachment;
-    std::unique_ptr<ComboBoxAttachment> pitchDropActiveAttachment;
-    std::unique_ptr<SliderAttachment> pitchDropOctavesAttachment, pitchDropTimeAttachment, glideTimeAttachment;
-
-    std::unique_ptr<ComboBoxAttachment> pumpActiveAttachment, pumpDivisionAttachment;
-    std::unique_ptr<SliderAttachment> pumpDepthAttachment, pumpCurveAttachment;
-
-    std::unique_ptr<ComboBoxAttachment> monoMakerActiveAttachment;
-    std::unique_ptr<SliderAttachment> monoMakerFreqAttachment;
-
-    std::unique_ptr<ComboBoxAttachment> transientTypeAttachment;
-    std::unique_ptr<SliderAttachment> clickLevelAttachment, transientDecayAttachment;
-
-    std::unique_ptr<SliderAttachment> macroDropAttachment;
-    std::unique_ptr<SliderAttachment> punchAttachment, gritAttachment, spaceAttachment, widthAttachment;
+    std::unique_ptr<SliderAttachment> fxChorusMixAttachment;
+    std::unique_ptr<SliderAttachment> fxDelayTimeAttachment;
+    std::unique_ptr<SliderAttachment> fxDelayMixAttachment;
+    std::unique_ptr<SliderAttachment> fxReverbDecayAttachment;
+    std::unique_ptr<SliderAttachment> fxReverbMixAttachment;
+    std::unique_ptr<ButtonAttachment> pumpAttachment;
+    std::unique_ptr<ButtonAttachment> monoMakerAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KeshaZeddSynthAudioProcessorEditor)
 };

@@ -694,6 +694,192 @@ PresetManager::PresetManager()
     p.fxReverbDecay = 0.8f;
     presets.push_back(p);
 
+    // ----------------------------------------------------
+    // CATEGORY 7: BILLBOARD HITS & ANTHEMS (41-46)
+    // ----------------------------------------------------
+
+    // 41. Safe and Sound (Capital Cities Brass Lead)
+    p = createDefaultPreset("Safe and Sound (Brass Lead)");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.9f;
+    p.unisonCount = 5;
+    p.unisonDetune = 14.0f;
+    p.osc2Shape = 3.0f; // Pulse
+    p.osc2Octave = -1;
+    p.osc2Level = 0.6f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 3800.0f;
+    p.filterRes = 0.25f;
+    p.filterEnvAmt = 0.45f;
+    p.filterAttack = 0.015f;
+    p.filterDecay = 0.35f;
+    p.filterSustain = 0.6f;
+    p.filterRelease = 0.3f;
+    p.ampAttack = 0.01f;
+    p.ampDecay = 0.4f;
+    p.ampSustain = 0.85f;
+    p.ampRelease = 0.4f;
+    p.fxChorusMix = 0.25f;
+    p.fxDelayTime = 180.0f;
+    p.fxDelayMix = 0.20f;
+    p.fxReverbMix = 0.25f;
+    presets.push_back(p);
+
+    // 42. Beautiful Now (Zedd Anthem Lead)
+    p = createDefaultPreset("Beautiful Now (Zedd Anthem Lead)");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 32.0f;
+    p.osc2Shape = 2.0f; // Saw
+    p.osc2Octave = 1;
+    p.osc2Detune = 7.0f;
+    p.osc2Level = 0.7f;
+    p.transientType = 3; // 808 Tock punch
+    p.transientLevel = 0.4f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 9500.0f;
+    p.filterRes = 0.20f;
+    p.filterDrive = 2.2f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 1.2f;
+    p.ampSustain = 0.90f;
+    p.ampRelease = 0.5f;
+    p.fxChorusRate = 1.6f;
+    p.fxChorusMix = 0.45f;
+    p.fxDelayTime = 375.0f;
+    p.fxDelayFeedback = 0.45f;
+    p.fxDelayMix = 0.35f;
+    p.fxReverbDecay = 0.7f;
+    p.fxReverbMix = 0.35f;
+    p.macroPunch = 0.6f;
+    presets.push_back(p);
+
+    // 43. Glad You Came (The Wanted Accordion Pluck)
+    p = createDefaultPreset("Glad You Came (Club Accordion Pluck)");
+    p.osc1Shape = 2.4f; // Square/Saw hybrid
+    p.osc1Octave = 0;
+    p.osc1Level = 0.9f;
+    p.unisonCount = 3;
+    p.unisonDetune = 10.0f;
+    p.osc2Shape = 3.0f; // Square
+    p.osc2Octave = 1;
+    p.osc2Level = 0.6f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 2400.0f;
+    p.filterRes = 0.3f;
+    p.filterEnvAmt = 0.65f;
+    p.filterAttack = 0.002f;
+    p.filterDecay = 0.18f;
+    p.filterSustain = 0.2f;
+    p.filterRelease = 0.25f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.22f;
+    p.ampSustain = 0.25f;
+    p.ampRelease = 0.25f;
+    p.fxChorusMix = 0.30f;
+    p.fxDelayTime = 220.0f;
+    p.fxDelayMix = 0.30f;
+    p.fxReverbMix = 0.20f;
+    presets.push_back(p);
+
+    // 44. Let It Rock (Kevin Rudolf Distorted Lead)
+    p = createDefaultPreset("Let It Rock (Distorted Rock Lead)");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.9f;
+    p.unisonCount = 5;
+    p.unisonDetune = 20.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = 0;
+    p.osc2Detune = 12.0f;
+    p.osc2Level = 0.75f;
+    p.fmDepth = 0.25f;
+    p.subWave = 1; // Square
+    p.subOctave = -1;
+    p.subLevel = 0.65f;
+    p.subDrive = 0.65f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 5500.0f;
+    p.filterRes = 0.35f;
+    p.filterDrive = 4.5f;
+    p.ampAttack = 0.005f;
+    p.ampDecay = 0.5f;
+    p.ampSustain = 0.85f;
+    p.ampRelease = 0.35f;
+    p.fxDrive = 3.5f;
+    p.fxChorusMix = 0.20f;
+    p.fxReverbMix = 0.25f;
+    p.trashGlossX = 0.7f;
+    presets.push_back(p);
+
+    // 45. Right Round (Flo Rida Club Pulse Stab)
+    p = createDefaultPreset("Right Round (Club Pulse Stab)");
+    p.osc1Shape = 2.85f; // Pulse Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 5;
+    p.unisonDetune = 18.0f;
+    p.osc2Shape = 2.0f; // Saw
+    p.osc2Octave = -1;
+    p.osc2Level = 0.8f;
+    p.subWave = 0; // Sine sub
+    p.subOctave = -1;
+    p.subLevel = 0.5f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 3200.0f;
+    p.filterRes = 0.35f;
+    p.filterEnvAmt = 0.55f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.22f;
+    p.filterSustain = 0.3f;
+    p.filterRelease = 0.25f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.3f;
+    p.ampSustain = 0.5f;
+    p.ampRelease = 0.3f;
+    p.pumpActive = 1;
+    p.pumpDepth = 0.55f;
+    p.fxChorusMix = 0.35f;
+    p.fxDelayTime = 250.0f;
+    p.fxDelayMix = 0.25f;
+    p.fxReverbMix = 0.25f;
+    presets.push_back(p);
+
+    // 46. Blow (Kesha Glitter Squelch Lead)
+    p = createDefaultPreset("Blow (Glitter Squelch Lead)");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 28.0f;
+    p.osc2Shape = 3.0f; // Square
+    p.osc2Octave = 1;
+    p.osc2Level = 0.6f;
+    p.fmDepth = 0.35f;
+    p.subWave = 1;
+    p.subOctave = -1;
+    p.subLevel = 0.55f;
+    p.subDrive = 0.5f;
+    p.filterMode = 5; // Vowel Formant
+    p.formantMorph = 1.2f;
+    p.filterRes = 0.5f;
+    p.filterDrive = 3.0f;
+    p.playMode = 1; // Mono Legato for pitch sliding
+    p.glideTime = 65.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.4f;
+    p.ampSustain = 0.9f;
+    p.ampRelease = 0.3f;
+    p.fxChorusMix = 0.40f;
+    p.fxDelayTime = 300.0f;
+    p.fxDelayMix = 0.30f;
+    p.fxReverbMix = 0.25f;
+    p.trashGlossX = 0.4f;
+    presets.push_back(p);
+
     // Populate name array
     for (const auto& preset : presets)
         presetNames.push_back(preset.name);
