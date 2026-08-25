@@ -3,28 +3,30 @@
 #include <juce_dsp/juce_dsp.h>
 #include <vector>
 #include <cmath>
-#include <random>
+#include <algorithm>
 
 class GlitterCloudReverb
 {
 public:
     GlitterCloudReverb()
     {
-        grainBufferL.resize(8192, 0.0f);
-        grainBufferR.resize(8192, 0.0f);
-        diffuserL.resize(16384, 0.0f);
-        diffuserR.resize(16384, 0.0f);
+        grainBufferL.assign(32768, 0.0f);
+        grainBufferR.assign(32768, 0.0f);
+        diffuserL.assign(131072, 0.0f);
+        diffuserR.assign(131072, 0.0f);
     }
 
     ~GlitterCloudReverb() = default;
 
     void prepare(double sRate)
     {
-        sampleRate = sRate;
-        grainBufferL.assign(static_cast<size_t>(sampleRate * 0.2), 0.0f);
-        grainBufferR.assign(static_cast<size_t>(sampleRate * 0.2), 0.0f);
-        diffuserL.assign(static_cast<size_t>(sampleRate * 0.6), 0.0f);
-        diffuserR.assign(static_cast<size_t>(sampleRate * 0.6), 0.0f);
+        sampleRate = (sRate > 1000.0) ? sRate : 44100.0;
+        int gSize = std::max(16384, static_cast<int>(sampleRate * 0.4));
+        int dSize = std::max(65536, static_cast<int>(sampleRate * 1.5));
+        grainBufferL.assign(static_cast<size_t>(gSize), 0.0f);
+        grainBufferR.assign(static_cast<size_t>(gSize), 0.0f);
+        diffuserL.assign(static_cast<size_t>(dSize), 0.0f);
+        diffuserR.assign(static_cast<size_t>(dSize), 0.0f);
         writePos = 0;
         diffWritePos = 0;
     }
@@ -36,12 +38,13 @@ public:
 
         const int numSamples = buffer.getNumSamples();
         const int numChannels = buffer.getNumChannels();
-        const size_t gBufLen = grainBufferL.size();
-        const size_t dBufLen = diffuserL.size();
+        const long long gBufLen = static_cast<long long>(grainBufferL.size());
+        const long long dBufLen = static_cast<long long>(diffuserL.size());
 
-        if (gBufLen == 0 || dBufLen == 0) return;
+        if (gBufLen <= 128 || dBufLen <= 128) return;
 
-        float grainLenSamples = (grainSizeMs * 0.001f) * static_cast<float>(sampleRate);
+        double sRate = (sampleRate > 1000.0) ? sampleRate : 44100.0;
+        float grainLenSamples = (grainSizeMs * 0.001f) * static_cast<float>(sRate);
         if (grainLenSamples < 64.0f) grainLenSamples = 64.0f;
 
         auto* lOut = buffer.getWritePointer(0);
@@ -53,8 +56,8 @@ public:
             float inR = rOut[s];
 
             // 1. Write incoming dry audio to pitch-shift buffer
-            grainBufferL[writePos] = inL;
-            grainBufferR[writePos] = inR;
+            grainBufferL[static_cast<size_t>(writePos % gBufLen)] = inL;
+            grainBufferR[static_cast<size_t>(writePos % gBufLen)] = inR;
 
             // 2. Dual pitch-shifted grain streams (+12 semitones = 2x speed)
             grainPhase1 += 2.0f;
@@ -66,34 +69,42 @@ public:
             float w1 = 0.5f * (1.0f - std::cos(2.0f * 3.14159265f * (grainPhase1 / grainLenSamples)));
             float w2 = 0.5f * (1.0f - std::cos(2.0f * 3.14159265f * (grainPhase2 / grainLenSamples)));
 
-            float readPos1 = static_cast<float>(writePos) - grainPhase1;
-            while (readPos1 < 0.0f) readPos1 += static_cast<float>(gBufLen);
+            long long readPos1 = static_cast<long long>(writePos - static_cast<int>(grainPhase1));
+            while (readPos1 < 0) readPos1 += gBufLen;
+            long long readPos2 = static_cast<long long>(writePos - static_cast<int>(grainPhase2));
+            while (readPos2 < 0) readPos2 += gBufLen;
 
-            float readPos2 = static_cast<float>(writePos) - grainPhase2;
-            while (readPos2 < 0.0f) readPos2 += static_cast<float>(gBufLen);
-
-            size_t idx1 = static_cast<size_t>(readPos1) % gBufLen;
-            size_t idx2 = static_cast<size_t>(readPos2) % gBufLen;
+            size_t idx1 = static_cast<size_t>(readPos1 % gBufLen);
+            size_t idx2 = static_cast<size_t>(readPos2 % gBufLen);
 
             float shimmerL = grainBufferL[idx1] * w1 + grainBufferL[idx2] * w2;
             float shimmerR = grainBufferR[idx1] * w1 + grainBufferR[idx2] * w2;
 
-            // 3. Stereo Diffusion & Shimmer Tail
-            size_t delayL1 = (diffWritePos + dBufLen - static_cast<size_t>(sampleRate * 0.13)) % dBufLen;
-            size_t delayR1 = (diffWritePos + dBufLen - static_cast<size_t>(sampleRate * 0.17)) % dBufLen;
-            size_t delayL2 = (diffWritePos + dBufLen - static_cast<size_t>(sampleRate * 0.23)) % dBufLen;
-            size_t delayR2 = (diffWritePos + dBufLen - static_cast<size_t>(sampleRate * 0.29)) % dBufLen;
+            // 3. Stereo Diffusion & Shimmer Tail (safe signed offsets)
+            long long tap1 = diffWritePos - static_cast<long long>(sRate * 0.07);
+            while (tap1 < 0) tap1 += dBufLen;
+            long long tap2 = diffWritePos - static_cast<long long>(sRate * 0.11);
+            while (tap2 < 0) tap2 += dBufLen;
+            long long tap3 = diffWritePos - static_cast<long long>(sRate * 0.17);
+            while (tap3 < 0) tap3 += dBufLen;
+            long long tap4 = diffWritePos - static_cast<long long>(sRate * 0.23);
+            while (tap4 < 0) tap4 += dBufLen;
 
-            float wetL = shimmerL * 0.6f + diffuserL[delayL1] * 0.45f + diffuserR[delayR2] * 0.35f;
-            float wetR = shimmerR * 0.6f + diffuserR[delayR1] * 0.45f + diffuserL[delayL2] * 0.35f;
+            size_t delayL1 = static_cast<size_t>(tap1 % dBufLen);
+            size_t delayR1 = static_cast<size_t>(tap2 % dBufLen);
+            size_t delayL2 = static_cast<size_t>(tap3 % dBufLen);
+            size_t delayR2 = static_cast<size_t>(tap4 % dBufLen);
+
+            float wetL = shimmerL * 0.6f + diffuserL[delayL1] * 0.40f + diffuserR[delayR2] * 0.30f;
+            float wetR = shimmerR * 0.6f + diffuserR[delayR1] * 0.40f + diffuserL[delayL2] * 0.30f;
 
             // Damping & feedback
-            diffuserL[diffWritePos] = wetL * 0.72f;
-            diffuserR[diffWritePos] = wetR * 0.72f;
+            diffuserL[static_cast<size_t>(diffWritePos % dBufLen)] = wetL * 0.68f;
+            diffuserR[static_cast<size_t>(diffWritePos % dBufLen)] = wetR * 0.68f;
 
             // 4. Mix with dry audio
-            lOut[s] = inL * (1.0f - glitterMix * 0.3f) + wetL * (glitterMix * 0.75f);
-            rOut[s] = inR * (1.0f - glitterMix * 0.3f) + wetR * (glitterMix * 0.75f);
+            lOut[s] = inL * (1.0f - glitterMix * 0.25f) + wetL * (glitterMix * 0.65f);
+            rOut[s] = inR * (1.0f - glitterMix * 0.25f) + wetR * (glitterMix * 0.65f);
 
             writePos = (writePos + 1) % gBufLen;
             diffWritePos = (diffWritePos + 1) % dBufLen;
@@ -107,8 +118,8 @@ private:
     std::vector<float> diffuserL;
     std::vector<float> diffuserR;
 
-    size_t writePos = 0;
-    size_t diffWritePos = 0;
+    long long writePos = 0;
+    long long diffWritePos = 0;
     float grainPhase1 = 0.0f;
     float grainPhase2 = 0.0f;
 };

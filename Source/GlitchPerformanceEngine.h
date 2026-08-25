@@ -28,15 +28,15 @@ public:
 
     void prepare(double sRate)
     {
-        sampleRate = sRate;
-        int bufSize = static_cast<int>(sampleRate * 2.0); // 2-second buffer
-        ringBuffer.setSize(2, std::max(bufSize, 4096));
+        sampleRate = (sRate > 1000.0) ? sRate : 44100.0;
+        int bufSize = std::max(8192, static_cast<int>(sampleRate * 2.5));
+        ringBuffer.setSize(2, bufSize);
         ringBuffer.clear();
         writePos = 0;
         activeMode = Off;
     }
 
-    void setBpm(double bpm) { hostBpm = bpm; }
+    void setBpm(double bpm) { hostBpm = (bpm > 20.0) ? bpm : 120.0; }
     void setMode(int mode)
     {
         GlitchMode newMode = static_cast<GlitchMode>(juce::jlimit(0, 4, mode));
@@ -48,6 +48,7 @@ public:
             stutterCapturePos = writePos;
             reversePlayPos = static_cast<float>(writePos);
             tapeSpeed = 1.0f;
+            tapeReadPos = static_cast<float>(writePos);
         }
     }
 
@@ -56,18 +57,21 @@ public:
         const int numSamples = buffer.getNumSamples();
         const int numChannels = buffer.getNumChannels();
         const int bufLength = ringBuffer.getNumSamples();
+        const int ringChannels = ringBuffer.getNumChannels();
 
-        if (bufLength <= 0) return;
+        if (bufLength <= 128 || ringChannels <= 0) return;
 
+        double sRate = (sampleRate > 1000.0) ? sampleRate : 44100.0;
         double secondsPerBeat = 60.0 / std::max(20.0, hostBpm);
         double secondsPer16th = secondsPerBeat * 0.25;
-        int stutterLength = static_cast<int>(secondsPer16th * sampleRate);
+        int stutterLength = static_cast<int>(secondsPer16th * sRate);
         if (stutterLength < 64) stutterLength = 512;
+
+        int safeChannels = std::min(numChannels, ringChannels);
 
         if (activeMode == Off)
         {
-            // Record incoming audio into circular buffer
-            for (int ch = 0; ch < numChannels; ++ch)
+            for (int ch = 0; ch < safeChannels; ++ch)
             {
                 auto* writePtr = ringBuffer.getWritePointer(ch);
                 const auto* readPtr = buffer.getReadPointer(ch);
@@ -86,7 +90,7 @@ public:
         if (activeMode == TapeStop)
         {
             float stopDurationSec = 0.38f;
-            float speedDecayPerSample = 1.0f / (stopDurationSec * static_cast<float>(sampleRate));
+            float speedDecayPerSample = 1.0f / (stopDurationSec * static_cast<float>(sRate));
 
             for (int s = 0; s < numSamples; ++s)
             {
@@ -99,13 +103,12 @@ public:
                 int idx1 = (idx0 + 1) % bufLength;
                 float frac = tapeReadPos - static_cast<float>(idx0);
 
-                float gain = (tapeSpeed > 0.02f) ? 1.0f : (tapeSpeed * 50.0f);
-
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
-                    const auto* rPtr = ringBuffer.getReadPointer(ch);
-                    float sample = (1.0f - frac) * rPtr[idx0] + frac * rPtr[idx1];
-                    buffer.setSample(ch, s, sample * gain);
+                    int rCh = std::min(ch, ringChannels - 1);
+                    const auto* ringPtr = ringBuffer.getReadPointer(rCh);
+                    float samp = (1.0f - frac) * ringPtr[idx0] + frac * ringPtr[idx1];
+                    buffer.setSample(ch, s, samp * (tapeSpeed > 0.01f ? 1.0f : 0.0f));
                 }
             }
         }
@@ -113,58 +116,57 @@ public:
         {
             for (int s = 0; s < numSamples; ++s)
             {
-                int offset = static_cast<int>(effectPhase) % stutterLength;
-                int readIdx = (stutterCapturePos - stutterLength + offset) % bufLength;
-                if (readIdx < 0) readIdx += bufLength;
+                int readOffset = (stutterPlayPos++) % stutterLength;
+                int readIdx = (stutterCapturePos - stutterLength + readOffset);
+                while (readIdx < 0) readIdx += bufLength;
+                readIdx %= bufLength;
 
-                // Anti-click window at repeat boundaries
-                float window = 1.0f;
-                if (offset < 48)
-                    window = static_cast<float>(offset) / 48.0f;
-                else if (offset > stutterLength - 48)
-                    window = static_cast<float>(stutterLength - offset) / 48.0f;
+                float env = 1.0f;
+                int fadeLen = std::min(64, stutterLength / 4);
+                if (readOffset < fadeLen)
+                    env = static_cast<float>(readOffset) / static_cast<float>(fadeLen);
+                else if (readOffset > stutterLength - fadeLen)
+                    env = static_cast<float>(stutterLength - readOffset) / static_cast<float>(fadeLen);
 
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
-                    float sample = ringBuffer.getSample(ch, readIdx);
-                    buffer.setSample(ch, s, sample * window);
+                    int rCh = std::min(ch, ringChannels - 1);
+                    float samp = ringBuffer.getSample(rCh, readIdx) * env;
+                    buffer.setSample(ch, s, samp);
                 }
-
-                effectPhase += 1.0f;
             }
         }
         else if (activeMode == PitchDive)
         {
-            float diveDurationSec = 0.42f;
-            float divePerSample = 1.0f / (diveDurationSec * static_cast<float>(sampleRate));
+            float diveDurationSec = 0.50f;
+            float diveStep = 1.0f / (diveDurationSec * static_cast<float>(sRate));
 
             for (int s = 0; s < numSamples; ++s)
             {
-                effectPhase = std::min(1.0f, effectPhase + divePerSample);
-                float speed = std::pow(0.25f, effectPhase); // Drops 2 octaves
+                diveProgress = std::min(1.0f, diveProgress + diveStep);
+                float speed = std::pow(0.25f, diveProgress); // Drop 2 octaves
 
-                diveReadPos += speed;
-                while (diveReadPos >= static_cast<float>(bufLength))
-                    diveReadPos -= static_cast<float>(bufLength);
+                tapeReadPos += speed;
+                while (tapeReadPos >= static_cast<float>(bufLength))
+                    tapeReadPos -= static_cast<float>(bufLength);
 
-                int idx0 = static_cast<int>(diveReadPos);
+                int idx0 = static_cast<int>(tapeReadPos);
                 int idx1 = (idx0 + 1) % bufLength;
-                float frac = diveReadPos - static_cast<float>(idx0);
+                float frac = tapeReadPos - static_cast<float>(idx0);
 
-                float gain = 1.0f - (effectPhase * 0.4f);
+                float gain = 1.0f - (diveProgress * 0.6f);
 
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
-                    const auto* rPtr = ringBuffer.getReadPointer(ch);
-                    float sample = (1.0f - frac) * rPtr[idx0] + frac * rPtr[idx1];
-                    buffer.setSample(ch, s, sample * gain);
+                    int rCh = std::min(ch, ringChannels - 1);
+                    const auto* ringPtr = ringBuffer.getReadPointer(rCh);
+                    float samp = ((1.0f - frac) * ringPtr[idx0] + frac * ringPtr[idx1]) * gain;
+                    buffer.setSample(ch, s, samp);
                 }
             }
         }
         else if (activeMode == ReverseSwell)
         {
-            float reverseDurationSamples = static_cast<float>(sampleRate * 0.45);
-
             for (int s = 0; s < numSamples; ++s)
             {
                 reversePlayPos -= 1.0f;
@@ -175,30 +177,18 @@ public:
                 int idx1 = (idx0 + 1) % bufLength;
                 float frac = reversePlayPos - static_cast<float>(idx0);
 
-                effectPhase = std::min(1.0f, effectPhase + (1.0f / reverseDurationSamples));
-                float swellGain = effectPhase * effectPhase; // Exponential swell
+                effectPhase = std::min(1.0f, effectPhase + 0.0001f);
+                float gain = std::pow(effectPhase, 1.5f);
 
                 for (int ch = 0; ch < numChannels; ++ch)
                 {
-                    const auto* rPtr = ringBuffer.getReadPointer(ch);
-                    float sample = (1.0f - frac) * rPtr[idx0] + frac * rPtr[idx1];
-                    buffer.setSample(ch, s, sample * swellGain);
+                    int rCh = std::min(ch, ringChannels - 1);
+                    const auto* ringPtr = ringBuffer.getReadPointer(rCh);
+                    float samp = ((1.0f - frac) * ringPtr[idx0] + frac * ringPtr[idx1]) * gain;
+                    buffer.setSample(ch, s, samp);
                 }
             }
         }
-
-        // Keep updating write position in ring buffer
-        for (int ch = 0; ch < numChannels; ++ch)
-        {
-            auto* writePtr = ringBuffer.getWritePointer(ch);
-            const auto* readPtr = buffer.getReadPointer(ch);
-            for (int s = 0; s < numSamples; ++s)
-            {
-                int idx = (writePos + s) % bufLength;
-                writePtr[idx] = readPtr[s];
-            }
-        }
-        writePos = (writePos + numSamples) % bufLength;
     }
 
 private:
@@ -208,13 +198,13 @@ private:
 
     juce::AudioBuffer<float> ringBuffer;
     int writePos = 0;
-
-    float effectPhase = 0.0f;
     int triggerSamplePos = 0;
     int stutterCapturePos = 0;
+    int stutterPlayPos = 0;
 
     float tapeSpeed = 1.0f;
     float tapeReadPos = 0.0f;
-    float diveReadPos = 0.0f;
+    float diveProgress = 0.0f;
     float reversePlayPos = 0.0f;
+    float effectPhase = 0.0f;
 };
