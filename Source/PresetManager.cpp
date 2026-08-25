@@ -1350,6 +1350,148 @@ PresetManager::PresetManager()
     p.fxReverbMix = 0.30f;
     presets.push_back(p);
 
+    // 67. Let It Rock - Overdriven Power-Saw Riff
+    p = createDefaultPreset("Let It Rock - Overdriven Power-Saw Riff");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 5;
+    p.unisonDetune = 22.0f;
+    p.osc2Shape = 1.0f; // Square / Pulse
+    p.osc2Octave = -1;
+    p.osc2Level = 0.75f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 3800.0f;
+    p.filterRes = 0.30f;
+    p.filterDrive = 4.5f; // Aggressive overdrive grit
+    p.filterEnvAmt = 0.55f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.28f;
+    p.filterSustain = 0.45f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.35f;
+    p.ampSustain = 0.70f;
+    p.ampRelease = 0.15f;
+    p.fxDrive = 3.5f; // Heavy tube saturation
+    p.fxChorusMix = 0.35f;
+    p.fxDelayMix = 0.20f;
+    p.fxReverbMix = 0.20f;
+    p.trashGlossX = 0.60f;
+    presets.push_back(p);
+
+    // 68. Let It Rock - Screaming Laser Lead
+    p = createDefaultPreset("Let It Rock - Screaming Laser Lead");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 1;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 28.0f;
+    p.osc2Shape = 1.0f; // Square Sync
+    p.osc2Octave = 0;
+    p.osc2Level = 0.60f;
+    p.oscSync = 1;
+    p.playMode = 1; // Mono Legato
+    p.glideTime = 45.0f;
+    p.filterCutoff = 16000.0f;
+    p.ampAttack = 0.001f;
+    p.ampRelease = 0.35f;
+    p.fxDelayTime = 265.0f; // 1/8 note sync
+    p.fxDelayMix = 0.40f;
+    p.fxReverbDecay = 0.85f;
+    p.fxReverbMix = 0.35f;
+    p.trashGlossY = 0.65f;
+    presets.push_back(p);
+
+    // 69. Let It Rock - High-Energy Synth Riser FX
+    p = createDefaultPreset("Let It Rock - High-Energy Synth Riser FX");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.90f;
+    p.unisonCount = 7;
+    p.unisonDetune = 55.0f;
+    p.osc2Shape = 1.0f; // Noise/Pulse
+    p.osc2Octave = 1;
+    p.osc2Level = 0.80f;
+    p.pitchDropActive = 1;
+    p.pitchDropOctaves = -3.0f; // Rising pitch
+    p.pitchDropTime = 4000.0f;  // 4 second rise
+    p.filterMode = 2; // Bandpass
+    p.filterCutoff = 2500.0f;
+    p.filterRes = 0.60f;
+    p.ampAttack = 2.5f; // Slow swell
+    p.ampRelease = 1.5f;
+    p.fxChorusMix = 0.60f;
+    p.fxReverbDecay = 0.95f;
+    p.fxReverbMix = 0.65f;
+    presets.push_back(p);
+
+    // 70. Let It Rock - Pumping Electro-Rock Chords
+    p = createDefaultPreset("Let It Rock - Pumping Electro-Rock Chords");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 40.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.70f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 13000.0f;
+    p.pumpActive = 1;
+    p.pumpDepth = 0.85f;
+    p.pumpDivision = 0; // 1/4 note pump
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.40f;
+    p.ampSustain = 0.90f;
+    p.ampRelease = 0.30f;
+    p.fxDrive = 2.5f;
+    p.fxChorusMix = 0.40f;
+    p.fxReverbMix = 0.30f;
+    p.trashGlossY = 0.55f;
+    presets.push_back(p);
+
+    // 71. Let It Rock - Distorted Gritty 808 Sub
+    p = createDefaultPreset("Let It Rock - Distorted Gritty 808 Sub");
+    p.osc1Shape = 0.0f; // Sine
+    p.osc1Octave = -2;
+    p.osc1Level = 0.95f;
+    p.subWave = 0;
+    p.subOctave = -2;
+    p.subLevel = 1.0f;
+    p.subDrive = 0.85f; // Saturated sub drive
+    p.filterCutoff = 300.0f;
+    p.monoMakerActive = 1;
+    p.monoMakerFreq = 160.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.40f;
+    p.ampSustain = 0.80f;
+    p.ampRelease = 0.15f;
+    p.fxDrive = 2.0f;
+    presets.push_back(p);
+
+    // 72. Let It Rock - Stadium Impact Downlifter FX
+    p = createDefaultPreset("Let It Rock - Stadium Impact Downlifter FX");
+    p.osc1Shape = 0.0f; // Sine Drop
+    p.osc1Octave = -1;
+    p.osc1Level = 0.95f;
+    p.pitchDropActive = 1;
+    p.pitchDropOctaves = 3.0f; // Downward drop
+    p.pitchDropTime = 1200.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = 0;
+    p.unisonCount = 7;
+    p.unisonDetune = 45.0f;
+    p.filterMode = 0;
+    p.filterCutoff = 2000.0f;
+    p.filterEnvAmt = -0.70f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 1.8f;
+    p.ampSustain = 0.0f;
+    p.ampRelease = 1.0f;
+    p.fxReverbDecay = 0.95f;
+    p.fxReverbMix = 0.70f;
+    presets.push_back(p);
+
     // Populate name array
     for (const auto& preset : presets)
         presetNames.push_back(preset.name);

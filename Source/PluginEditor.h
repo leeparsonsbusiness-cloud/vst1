@@ -437,6 +437,16 @@ public:
         floRidaMenu.addItem(65, "Right Round - Glitch Squelch Arp");
         floRidaMenu.addItem(66, "Right Round - 80s Retro Analog Brass");
         menu.addSubMenu("10_Flo Rida 'Right Round' Suite", floRidaMenu);
+
+        // 11. Kevin Rudolf "Let It Rock" Pop-Rock Suite
+        juce::PopupMenu kevinRudolfMenu;
+        kevinRudolfMenu.addItem(67, "Let It Rock - Overdriven Power-Saw Riff");
+        kevinRudolfMenu.addItem(68, "Let It Rock - Screaming Laser Lead");
+        kevinRudolfMenu.addItem(69, "Let It Rock - High-Energy Synth Riser FX");
+        kevinRudolfMenu.addItem(70, "Let It Rock - Pumping Electro-Rock Chords");
+        kevinRudolfMenu.addItem(71, "Let It Rock - Distorted Gritty 808 Sub");
+        kevinRudolfMenu.addItem(72, "Let It Rock - Stadium Impact Downlifter FX");
+        menu.addSubMenu("11_Kevin Rudolf 'Let It Rock' Suite", kevinRudolfMenu);
         
         // User Presets
         juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
@@ -484,7 +494,7 @@ public:
             {
                 menuShowing = false;
                 if (result == 0) return;
-                if (result >= 1 && result <= 66)
+                if (result >= 1 && result <= 72)
                 {
                     if (onPresetSelected)
                         onPresetSelected(result - 1);
