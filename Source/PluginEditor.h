@@ -447,6 +447,16 @@ public:
         kevinRudolfMenu.addItem(71, "Let It Rock - Distorted Gritty 808 Sub");
         kevinRudolfMenu.addItem(72, "Let It Rock - Stadium Impact Downlifter FX");
         menu.addSubMenu("11_Kevin Rudolf 'Let It Rock' Suite", kevinRudolfMenu);
+
+        // 12. Kesha "Take It Off" Modern Festival Suite
+        juce::PopupMenu keshaFestivalMenu;
+        keshaFestivalMenu.addItem(73, "Take It Off - Sharp Confetti Hook Pluck");
+        keshaFestivalMenu.addItem(74, "Take It Off - Gritty Bridge Distortion Bass");
+        keshaFestivalMenu.addItem(75, "Take It Off - Festival Pumping Supersaws");
+        keshaFestivalMenu.addItem(76, "Take It Off - Screaming Arabian Hook Lead");
+        keshaFestivalMenu.addItem(77, "Take It Off - Glitter Confetti Shimmer FX");
+        keshaFestivalMenu.addItem(78, "Take It Off - Stomping Festival Kick & Sub");
+        menu.addSubMenu("12_Kesha 'Take It Off' Suite", keshaFestivalMenu);
         
         // User Presets
         juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
@@ -494,7 +504,7 @@ public:
             {
                 menuShowing = false;
                 if (result == 0) return;
-                if (result >= 1 && result <= 72)
+                if (result >= 1 && result <= 78)
                 {
                     if (onPresetSelected)
                         onPresetSelected(result - 1);

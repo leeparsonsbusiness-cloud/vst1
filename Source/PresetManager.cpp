@@ -1492,6 +1492,149 @@ PresetManager::PresetManager()
     p.fxReverbMix = 0.70f;
     presets.push_back(p);
 
+    // 73. Take It Off - Sharp Confetti Hook Pluck
+    p = createDefaultPreset("Take It Off - Sharp Confetti Hook Pluck");
+    p.osc1Shape = 1.0f; // Square
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 3;
+    p.unisonDetune = 12.0f;
+    p.osc2Shape = 2.0f; // Saw
+    p.osc2Octave = 0;
+    p.osc2Level = 0.70f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 3600.0f;
+    p.filterRes = 0.38f;
+    p.filterEnvAmt = 0.65f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.18f;
+    p.filterSustain = 0.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.22f;
+    p.ampSustain = 0.0f;
+    p.ampRelease = 0.10f;
+    p.fxChorusMix = 0.35f;
+    p.fxDelayTime = 240.0f; // 1/8 note sync
+    p.fxDelayMix = 0.35f;
+    p.fxReverbMix = 0.25f;
+    p.trashGlossY = 0.60f;
+    presets.push_back(p);
+
+    // 74. Take It Off - Gritty Bridge Distortion Bass
+    p = createDefaultPreset("Take It Off - Gritty Bridge Distortion Bass");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = -1;
+    p.osc1Level = 0.95f;
+    p.osc2Shape = 1.0f; // Square
+    p.osc2Octave = -2;
+    p.osc2Level = 0.75f;
+    p.subWave = 0; // Sine Sub
+    p.subOctave = -2;
+    p.subLevel = 1.0f;
+    p.subDrive = 0.85f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 2200.0f;
+    p.filterRes = 0.35f;
+    p.filterDrive = 5.5f; // Heavy overdrive growl
+    p.filterEnvAmt = 0.50f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.25f;
+    p.filterSustain = 0.40f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.30f;
+    p.ampSustain = 0.80f;
+    p.ampRelease = 0.12f;
+    p.playMode = 1; // Mono Legato
+    p.glideTime = 30.0f;
+    p.monoMakerActive = 1;
+    p.monoMakerFreq = 160.0f;
+    p.fxDrive = 4.0f;
+    p.trashGlossX = 0.65f;
+    presets.push_back(p);
+
+    // 75. Take It Off - Festival Pumping Supersaws
+    p = createDefaultPreset("Take It Off - Festival Pumping Supersaws");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7;
+    p.unisonDetune = 42.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.65f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 14000.0f;
+    p.pumpActive = 1;
+    p.pumpDepth = 0.85f;
+    p.pumpDivision = 0; // 1/4 note pump
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.40f;
+    p.ampSustain = 0.90f;
+    p.ampRelease = 0.30f;
+    p.fxChorusMix = 0.45f;
+    p.fxReverbMix = 0.35f;
+    p.trashGlossY = 0.65f;
+    presets.push_back(p);
+
+    // 76. Take It Off - Screaming Arabian Hook Lead
+    p = createDefaultPreset("Take It Off - Screaming Arabian Hook Lead");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 1;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 5;
+    p.unisonDetune = 24.0f;
+    p.osc2Shape = 1.0f; // Square Sync
+    p.osc2Octave = 0;
+    p.osc2Level = 0.65f;
+    p.oscSync = 1;
+    p.playMode = 1; // Mono Legato
+    p.glideTime = 35.0f;
+    p.filterCutoff = 15000.0f;
+    p.ampAttack = 0.001f;
+    p.ampRelease = 0.30f;
+    p.fxDelayTime = 360.0f; // 1/8d
+    p.fxDelayMix = 0.35f;
+    p.fxReverbMix = 0.30f;
+    p.trashGlossY = 0.55f;
+    presets.push_back(p);
+
+    // 77. Take It Off - Glitter Confetti Shimmer FX
+    p = createDefaultPreset("Take It Off - Glitter Confetti Shimmer FX");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 1;
+    p.unisonCount = 7;
+    p.unisonDetune = 50.0f;
+    p.filterMode = 3; // Highpass
+    p.filterCutoff = 4000.0f;
+    p.filterRes = 0.40f;
+    p.ampAttack = 0.8f;
+    p.ampRelease = 2.0f;
+    p.fxReverbDecay = 0.95f;
+    p.fxReverbMix = 0.70f;
+    p.trashGlossY = 0.75f;
+    presets.push_back(p);
+
+    // 78. Take It Off - Stomping Festival Kick & Sub
+    p = createDefaultPreset("Take It Off - Stomping Festival Kick & Sub");
+    p.osc1Shape = 0.0f; // Sine
+    p.osc1Octave = -2;
+    p.osc1Level = 1.0f;
+    p.pitchDropActive = 1;
+    p.pitchDropOctaves = 2.5f;
+    p.pitchDropTime = 35.0f;
+    p.subWave = 0;
+    p.subOctave = -2;
+    p.subLevel = 1.0f;
+    p.subDrive = 0.75f;
+    p.filterCutoff = 280.0f;
+    p.monoMakerActive = 1;
+    p.monoMakerFreq = 160.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.30f;
+    p.ampSustain = 0.0f;
+    p.ampRelease = 0.05f;
+    presets.push_back(p);
+
     // Populate name array
     for (const auto& preset : presets)
         presetNames.push_back(preset.name);
