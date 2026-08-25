@@ -17,6 +17,8 @@
 #include "ChordProgressionEngine.h"
 #include "HarmonizerEngine.h"
 #include "AutoBassEngine.h"
+#include "GlitchPerformanceEngine.h"
+#include "GlitterCloudReverb.h"
 
 class KeshaZeddSynthAudioProcessor : public juce::AudioProcessor
 {
@@ -63,6 +65,8 @@ public:
     ChordProgressionEngine& getChordProgEngine() { return chordProgEngine; }
     HarmonizerEngine& getHarmonizerEngine() { return harmonizerEngine; }
     AutoBassEngine& getAutoBassEngine() { return autoBassEngine; }
+    GlitchPerformanceEngine& getGlitchEngine() { return glitchEngine; }
+    GlitterCloudReverb& getGlitterReverb() { return glitterReverb; }
     
     int getActiveVoiceCount() const { return activeVoiceCount.load(); }
 
@@ -92,6 +96,8 @@ private:
     ChordProgressionEngine chordProgEngine;
     HarmonizerEngine harmonizerEngine;
     AutoBassEngine autoBassEngine;
+    GlitchPerformanceEngine glitchEngine;
+    GlitterCloudReverb glitterReverb;
 
     int currentPresetIndex = 0;
     std::atomic<int> activeVoiceCount { 0 };

@@ -37,6 +37,8 @@ void KeshaZeddSynthAudioProcessor::prepareToPlay(double sampleRate, int samplesP
     expandedFX.prepare(spec);
     producerFlavor.prepare(spec);
     riserEngine.prepare(sampleRate);
+    glitchEngine.prepare(sampleRate);
+    glitterReverb.prepare(sampleRate);
 
     zeddifyEngine.setSampleRate(sampleRate);
     autoBassEngine.setSampleRate(sampleRate);
@@ -113,6 +115,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     }
     zeddifyEngine.setBpm(bpm);
     autoBassEngine.setBpm(bpm);
+    glitchEngine.setBpm(bpm);
 
     // Update Zeddify Pattern Style
     int zeddStyle = static_cast<int>(apvts.getRawParameterValue("zeddify_style")->load());
@@ -363,30 +366,40 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     // 13. Expanded FX Suite (Bitcrusher, Wavefolder, Phaser/Flanger)
     expandedFX.process(buffer, apvts);
 
-    // 14. Producer Flavor Processing
+    // 14. "Glitter Cloud" Granular Shimmer Reverb
+    float glitterMix = apvts.getRawParameterValue("glitter_mix")->load();
+    float grainSize = apvts.getRawParameterValue("glitter_grain_size")->load();
+    glitterReverb.process(buffer, glitterMix, grainSize);
+
+    // 15. Producer Flavor Processing
     int flavorIdx = static_cast<int>(apvts.getRawParameterValue("producer_flavor")->load());
     float flavorIntensity = apvts.getRawParameterValue("producer_flavor_intensity")->load();
     producerFlavor.process(buffer, flavorIdx, flavorIntensity);
 
-    // 15. The Riser / Buildup Processing
+    // 16. The Riser / Buildup Processing
     riserEngine.process(buffer, riserActive, riserProgress, bpm);
 
-    // 16. Auto-Master One-Click Polish Stage
+    // 17. Momentary Glitch & Tape-Stop Performance Ribbon
+    int glitchMode = static_cast<int>(apvts.getRawParameterValue("glitch_mode")->load());
+    glitchEngine.setMode(glitchMode);
+    glitchEngine.process(buffer);
+
+    // 18. Auto-Master One-Click Polish Stage
     bool autoMasterActive = apvts.getRawParameterValue("auto_master_active")->load() > 0.5f;
     float autoMasterIntensity = apvts.getRawParameterValue("auto_master_intensity")->load();
     autoMaster.process(buffer, autoMasterActive, autoMasterIntensity);
 
-    // 17. Master Volume scaling
+    // 19. Master Volume scaling
     float masterVol = apvts.getRawParameterValue("master_vol")->load();
     buffer.applyGain(masterVol);
 
-    // 18. Stream to Visualizer FFT & Scope
+    // 20. Stream to Visualizer FFT & Scope
     visualizer.pushSampleBlock(buffer.getReadPointer(0), numSamples);
     float currentCutoff = apvts.getRawParameterValue("filter_cutoff")->load();
     float currentRes = apvts.getRawParameterValue("filter_res")->load();
     visualizer.setFilterCutoffAndRes(currentCutoff, currentRes);
 
-    // 19. Track Peak Levels for UI VU Meter
+    // 21. Track Peak Levels for UI VU Meter
     float peakL = buffer.getMagnitude(0, 0, numSamples);
     float peakR = (totalNumOutputChannels > 1) ? buffer.getMagnitude(1, 0, numSamples) : peakL;
     outputLevelL.store(peakL);
@@ -406,7 +419,8 @@ void KeshaZeddSynthAudioProcessor::randomizeParameters()
                 rangedParam->paramID == "chord_mode" ||
                 rangedParam->paramID == "chord_type" ||
                 rangedParam->paramID == "ui_theme" ||
-                rangedParam->paramID == "chord_prog_preset")
+                rangedParam->paramID == "chord_prog_preset" ||
+                rangedParam->paramID == "glitch_mode")
             {
                 continue;
             }
@@ -641,6 +655,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("chord_prog_preset", 1), "Chord Sets Progression", 0, 8, 0));
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("harmonizer_mode", 1), "Auto Harmonizer", 0, 4, 0));
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("auto_bass_mode", 1), "Auto Bassline Follower", 0, 4, 0));
+
+    // Performance & Spatial Shimmer Additions
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("glitch_mode", 1), "Glitch Mode", 0, 4, 0));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("glitter_mix", 1), "Glitter Shimmer Mix", 0.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("glitter_grain_size", 1), "Glitter Grain Size", 20.0f, 80.0f, 40.0f));
 
     return { params.begin(), params.end() };
 }

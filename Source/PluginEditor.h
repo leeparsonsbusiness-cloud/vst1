@@ -10,6 +10,44 @@ using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
 using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
 using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
+// Momentary Performance Trigger Pad Component
+class MomentaryPadButton : public juce::Component
+{
+public:
+    MomentaryPadButton(const juce::String& labelText, juce::Colour activeCol, std::function<void(bool)> triggerCb)
+        : text(labelText), accentColour(activeCol), callback(triggerCb) {}
+    ~MomentaryPadButton() override = default;
+
+    void paint(juce::Graphics& g) override
+    {
+        auto bounds = getLocalBounds().toFloat().reduced(1.0f);
+        
+        juce::Colour bg = isDown ? accentColour.withAlpha(0.35f) : (isHovered ? juce::Colour(0xff222533) : juce::Colour(0xff161822));
+        g.setColour(bg);
+        g.fillRoundedRectangle(bounds, 3.5f);
+
+        juce::Colour border = isDown ? accentColour : (isHovered ? accentColour.withAlpha(0.6f) : juce::Colour(0xff2e3244));
+        g.setColour(border);
+        g.drawRoundedRectangle(bounds, 3.5f, isDown ? 1.5f : 1.0f);
+
+        g.setColour(isDown ? juce::Colours::white : (isHovered ? juce::Colour(0xfff0f2f8) : juce::Colour(0xffa2a8be)));
+        g.setFont(juce::FontOptions(8.5f, juce::Font::bold));
+        g.drawText(text, bounds, juce::Justification::centred, false);
+    }
+
+    void mouseEnter(const juce::MouseEvent&) override { isHovered = true; repaint(); }
+    void mouseExit(const juce::MouseEvent&) override { isHovered = false; isDown = false; if (callback) callback(false); repaint(); }
+    void mouseDown(const juce::MouseEvent&) override { isDown = true; if (callback) callback(true); repaint(); }
+    void mouseUp(const juce::MouseEvent&) override { isDown = false; if (callback) callback(false); repaint(); }
+
+private:
+    juce::String text;
+    juce::Colour accentColour;
+    std::function<void(bool)> callback;
+    bool isHovered = false;
+    bool isDown = false;
+};
+
 // Drag-and-Drop MIDI Export Handle Component (for Zeddify Melodies or Chords)
 class DragMidiButton : public juce::Component
 {
@@ -400,7 +438,7 @@ private:
     juce::Label layerBTypeLabel;
 
     // ----------------------------------------------------
-    // SECTION 2: SONGWRITING, FLAVOR & SLIDE (Center Bay)
+    // SECTION 2: SONGWRITING & PERFORMANCE (Center Bay)
     // ----------------------------------------------------
     juce::ToggleButton slideToggle;
     juce::Slider glideTimeSlider;
@@ -419,6 +457,12 @@ private:
     juce::Label producerFlavorIntensityLabel;
 
     juce::ToggleButton riserToggle;
+
+    // 4 Momentary Glitch Trigger Pads
+    std::unique_ptr<MomentaryPadButton> tapeStopPad;
+    std::unique_ptr<MomentaryPadButton> stutterPad;
+    std::unique_ptr<MomentaryPadButton> divePad;
+    std::unique_ptr<MomentaryPadButton> reversePad;
 
     juce::Slider ampAttackSlider;
     juce::Label ampAttackLabel;
@@ -440,7 +484,7 @@ private:
     juce::Label scaleTypeLabel;
 
     // ----------------------------------------------------
-    // SECTION 3: EFFECTS, SPACE & ANALOG DRIFT (Right Bay)
+    // SECTION 3: EFFECTS, SPACE & GLITTER CLOUD (Right Bay)
     // ----------------------------------------------------
     juce::Slider fxDriveSlider;
     juce::Label fxDriveLabel;
@@ -456,6 +500,11 @@ private:
     juce::Label fxReverbMixLabel;
     juce::Slider analogDriftSlider;
     juce::Label analogDriftLabel;
+
+    juce::Slider glitterMixSlider;
+    juce::Label glitterMixLabel;
+    juce::Slider glitterGrainSlider;
+    juce::Label glitterGrainLabel;
 
     juce::ToggleButton pumpToggle;
     juce::ToggleButton monoMakerToggle;
@@ -502,6 +551,8 @@ private:
     std::unique_ptr<SliderAttachment> fxReverbDecayAttachment;
     std::unique_ptr<SliderAttachment> fxReverbMixAttachment;
     std::unique_ptr<SliderAttachment> analogDriftAttachment;
+    std::unique_ptr<SliderAttachment> glitterMixAttachment;
+    std::unique_ptr<SliderAttachment> glitterGrainAttachment;
     std::unique_ptr<ButtonAttachment> pumpAttachment;
     std::unique_ptr<ButtonAttachment> monoMakerAttachment;
 

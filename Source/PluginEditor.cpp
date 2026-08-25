@@ -472,7 +472,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     layerBTypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "layer_b_type", layerBTypeBox);
 
     // ----------------------------------------------------
-    // SECTION 2: SONGWRITING, FLAVOR & SLIDE (Center Bay)
+    // SECTION 2: SONGWRITING & PERFORMANCE (Center Bay)
     // ----------------------------------------------------
     slideToggle.setButtonText("SLIDE / GLIDE");
     addAndMakeVisible(slideToggle);
@@ -512,6 +512,31 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     addAndMakeVisible(riserToggle);
     riserAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "riser_active", riserToggle);
 
+    // 4 Momentary Glitch Trigger Pads
+    tapeStopPad = std::make_unique<MomentaryPadButton>("TAPE STOP", juce::Colour(0xffff3366), [this](bool down) {
+        if (auto* param = audioProcessor.getAPVTS().getParameter("glitch_mode"))
+            param->setValueNotifyingHost(down ? 0.25f : 0.0f);
+    });
+    addAndMakeVisible(*tapeStopPad);
+
+    stutterPad = std::make_unique<MomentaryPadButton>("STUTTER", juce::Colour(0xff00d4ff), [this](bool down) {
+        if (auto* param = audioProcessor.getAPVTS().getParameter("glitch_mode"))
+            param->setValueNotifyingHost(down ? 0.50f : 0.0f);
+    });
+    addAndMakeVisible(*stutterPad);
+
+    divePad = std::make_unique<MomentaryPadButton>("DIVE", juce::Colour(0xffffaa00), [this](bool down) {
+        if (auto* param = audioProcessor.getAPVTS().getParameter("glitch_mode"))
+            param->setValueNotifyingHost(down ? 0.75f : 0.0f);
+    });
+    addAndMakeVisible(*divePad);
+
+    reversePad = std::make_unique<MomentaryPadButton>("REVERSE", juce::Colour(0xffd400ff), [this](bool down) {
+        if (auto* param = audioProcessor.getAPVTS().getParameter("glitch_mode"))
+            param->setValueNotifyingHost(down ? 1.00f : 0.0f);
+    });
+    addAndMakeVisible(*reversePad);
+
     setupSlider(ampAttackSlider, ampAttackLabel, "ATTACK");
     ampAttackAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_attack", ampAttackSlider);
 
@@ -539,7 +564,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     scaleTypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "scale_type", scaleTypeBox);
 
     // ----------------------------------------------------
-    // SECTION 3: EFFECTS, SPACE & ANALOG DRIFT (Right Bay)
+    // SECTION 3: EFFECTS, SPACE & GLITTER CLOUD (Right Bay)
     // ----------------------------------------------------
     setupSlider(fxDriveSlider, fxDriveLabel, "GRIT");
     fxDriveAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_drive", fxDriveSlider);
@@ -558,6 +583,12 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
 
     setupSlider(fxReverbMixSlider, fxReverbMixLabel, "REVERB MIX");
     fxReverbMixAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_reverb_mix", fxReverbMixSlider);
+
+    setupSlider(glitterMixSlider, glitterMixLabel, "GLITTER CLOUD");
+    glitterMixAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "glitter_mix", glitterMixSlider);
+
+    setupSlider(glitterGrainSlider, glitterGrainLabel, "GRAIN SIZE");
+    glitterGrainAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "glitter_grain_size", glitterGrainSlider);
 
     setupSlider(analogDriftSlider, analogDriftLabel, "VCO DRIFT");
     analogDriftAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "analog_drift", analogDriftSlider);
@@ -788,33 +819,39 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     glideTimeLabel.setBounds(500, 218, 60, 13);
     glideTimeSlider.setBounds(500, 230, 60, 48);
 
-    // Envelopes (y: 285)
-    ampAttackLabel.setBounds(300, 282, 58, 13);
-    ampAttackSlider.setBounds(300, 294, 58, 46);
+    // Row 4: Momentary Performance Ribbon (y: 284)
+    if (tapeStopPad) tapeStopPad->setBounds(300, 284, 62, 22);
+    if (stutterPad)  stutterPad->setBounds(365, 284, 62, 22);
+    if (divePad)     divePad->setBounds(430, 284, 62, 22);
+    if (reversePad)  reversePad->setBounds(495, 284, 65, 22);
 
-    ampDecayLabel.setBounds(362, 282, 58, 13);
-    ampDecaySlider.setBounds(362, 294, 58, 46);
+    // Envelopes (y: 315)
+    ampAttackLabel.setBounds(300, 312, 58, 13);
+    ampAttackSlider.setBounds(300, 324, 58, 46);
 
-    ampSustainLabel.setBounds(424, 282, 58, 13);
-    ampSustainSlider.setBounds(424, 294, 58, 46);
+    ampDecayLabel.setBounds(362, 312, 58, 13);
+    ampDecaySlider.setBounds(362, 324, 58, 46);
 
-    ampReleaseLabel.setBounds(486, 282, 58, 13);
-    ampReleaseSlider.setBounds(486, 294, 58, 46);
+    ampSustainLabel.setBounds(424, 312, 58, 13);
+    ampSustainSlider.setBounds(424, 324, 58, 46);
 
-    // Macros & Scale Lock (y: 350)
-    macroDropLabel.setBounds(300, 348, 65, 13);
-    macroDropSlider.setBounds(300, 360, 65, 52);
+    ampReleaseLabel.setBounds(486, 312, 58, 13);
+    ampReleaseSlider.setBounds(486, 324, 58, 46);
 
-    punchLabel.setBounds(370, 348, 65, 13);
-    punchSlider.setBounds(370, 360, 65, 52);
+    // Macros & Scale Lock (y: 375)
+    macroDropLabel.setBounds(300, 372, 65, 13);
+    macroDropSlider.setBounds(300, 384, 65, 50);
 
-    scaleRootLabel.setBounds(445, 348, 45, 13);
-    scaleRootBox.setBounds(445, 362, 45, 22);
+    punchLabel.setBounds(370, 372, 65, 13);
+    punchSlider.setBounds(370, 384, 65, 50);
 
-    scaleTypeLabel.setBounds(495, 348, 65, 13);
-    scaleTypeBox.setBounds(495, 362, 65, 22);
+    scaleRootLabel.setBounds(445, 372, 45, 13);
+    scaleRootBox.setBounds(445, 386, 45, 22);
 
-    riserToggle.setBounds(300, 418, 255, 22);
+    scaleTypeLabel.setBounds(495, 372, 65, 13);
+    scaleTypeBox.setBounds(495, 386, 65, 22);
+
+    riserToggle.setBounds(300, 436, 255, 22);
 
     // ----------------------------------------------------
     // Section 3: Effects & Space (x: 576, y: 118, w: 268, h: 430)
@@ -826,23 +863,30 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     fxChorusMixLabel.setBounds(672, 142, 74, 13);
     fxChorusMixSlider.setBounds(672, 155, 74, 54);
 
-    fxDelayTimeLabel.setBounds(760, 142, 74, 13);
-    fxDelayTimeSlider.setBounds(760, 155, 74, 54);
+    analogDriftLabel.setBounds(760, 142, 74, 13);
+    analogDriftSlider.setBounds(760, 155, 74, 54);
 
-    // Row 2 (y: 225)
-    fxDelayMixLabel.setBounds(584, 222, 74, 13);
-    fxDelayMixSlider.setBounds(584, 235, 74, 54);
+    // Row 2: Delay & Reverb (y: 225)
+    fxDelayTimeLabel.setBounds(584, 222, 74, 13);
+    fxDelayTimeSlider.setBounds(584, 235, 74, 54);
 
-    fxReverbDecayLabel.setBounds(672, 222, 74, 13);
-    fxReverbDecaySlider.setBounds(672, 235, 74, 54);
+    fxDelayMixLabel.setBounds(672, 222, 74, 13);
+    fxDelayMixSlider.setBounds(672, 235, 74, 54);
 
-    fxReverbMixLabel.setBounds(760, 222, 74, 13);
-    fxReverbMixSlider.setBounds(760, 235, 74, 54);
+    fxReverbDecayLabel.setBounds(760, 222, 74, 13);
+    fxReverbDecaySlider.setBounds(760, 235, 74, 54);
 
-    // Row 3 (y: 310)
-    analogDriftLabel.setBounds(584, 308, 74, 13);
-    analogDriftSlider.setBounds(584, 322, 74, 54);
+    // Row 3: Reverb Mix & Glitter Cloud (y: 305)
+    fxReverbMixLabel.setBounds(584, 302, 74, 13);
+    fxReverbMixSlider.setBounds(584, 315, 74, 54);
 
-    pumpToggle.setBounds(670, 318, 115, 22);
-    monoMakerToggle.setBounds(670, 346, 115, 22);
+    glitterMixLabel.setBounds(672, 302, 74, 13);
+    glitterMixSlider.setBounds(672, 315, 74, 54);
+
+    glitterGrainLabel.setBounds(760, 302, 74, 13);
+    glitterGrainSlider.setBounds(760, 315, 74, 54);
+
+    // Row 4 Toggles (y: 382)
+    pumpToggle.setBounds(584, 382, 120, 22);
+    monoMakerToggle.setBounds(714, 382, 120, 22);
 }
