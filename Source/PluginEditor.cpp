@@ -105,7 +105,6 @@ juce::Colour ModernSynthLookAndFeel::getAccentColour(int bayIndex) const
     {
         return juce::Colour(0xffaaaaaa);
     }
-    // Analog Lab Default
     if (bayIndex == 0) return juce::Colour(0xff00d4ff);
     if (bayIndex == 1) return juce::Colour(0xffffaa00);
     return juce::Colour(0xffff5500);
@@ -116,7 +115,6 @@ void ModernSynthLookAndFeel::drawSidePanels(juce::Graphics& g, int width, int he
     float panelWidth = 10.0f;
     if (currentTheme == VintageCream)
     {
-        // Teak Wood side panels
         auto drawTeak = [&](float x) {
             juce::ColourGradient grad(juce::Colour(0xffb87d4b), x, 0.0f,
                                       juce::Colour(0xff6e4726), x + panelWidth, 0.0f, false);
@@ -128,7 +126,6 @@ void ModernSynthLookAndFeel::drawSidePanels(juce::Graphics& g, int width, int he
     }
     else if (currentTheme == CyberNeon)
     {
-        // Cyber glowing carbon panels
         auto drawCyber = [&](float x) {
             juce::ColourGradient grad(juce::Colour(0xff1d0a30), x, 0.0f,
                                       juce::Colour(0xff080210), x + panelWidth, 0.0f, false);
@@ -142,12 +139,11 @@ void ModernSynthLookAndFeel::drawSidePanels(juce::Graphics& g, int width, int he
     }
     else if (currentTheme == StealthBlackout)
     {
-        // Matte Carbon Panels
         g.setColour(juce::Colour(0xff16161a));
         g.fillRect(0.0f, 0.0f, panelWidth, (float) height);
         g.fillRect((float) (width - 10), 0.0f, panelWidth, (float) height);
     }
-    else // Mahogany Wood Panels
+    else
     {
         auto drawWood = [&](float x) {
             juce::ColourGradient woodGrad(juce::Colour(0xff452314), x, 0.0f,
@@ -324,7 +320,7 @@ void ModernSynthLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Butto
 // Plugin Editor Implementation
 // ==============================================================================
 KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZeddSynthAudioProcessor& p)
-    : AudioProcessorEditor(&p), audioProcessor(p), dragMidiButton(p), vuMeter(p)
+    : AudioProcessorEditor(&p), audioProcessor(p), dragMidiButton(p, false), dragChordButton(p, true), vuMeter(p)
 {
     setLookAndFeel(&lookAndFeel);
     setSize(860, 560);
@@ -405,14 +401,22 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     zeddifyAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "zeddify_active", zeddifyButton);
 
     setupComboBox(zeddifyStyleBox, presetLabel, "");
-    zeddifyStyleBox.addItemList({"Zedd 16th", "Avicii Anthem", "Eurodance Riff", "Synthwave Roll", "Tropical Strum"}, 1);
+    zeddifyStyleBox.addItemList({"Zedd 16th", "Avicii Anthem", "Eurodance Riff", "Synthwave Roll", 
+                                 "Tropical Strum", "Nu-Disco Stabs", "Future Rave", "Slap House", 
+                                 "Hyperpop Glitch", "Trap Half-Time", "Acid 303 Roll", "Stadium Stabs"}, 1);
     zeddifyStyleAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "zeddify_style", zeddifyStyleBox);
+
+    mutateButton.setButtonText("MUTATE");
+    mutateButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff332244));
+    addAndMakeVisible(mutateButton);
+    mutateButton.onClick = [this]() {
+        audioProcessor.getZeddifyEngine().mutateCurrentPattern();
+    };
 
     autoMasterButton.setButtonText("AUTO-MASTER");
     addAndMakeVisible(autoMasterButton);
     autoMasterAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "auto_master_active", autoMasterButton);
 
-    // Theme Switcher Dropdown
     setupComboBox(themeBox, presetLabel, "");
     themeBox.addItemList({"Analog Lab", "Cyber Neon", "Vintage Cream", "Stealth"}, 1);
     themeBox.onChange = [this]() {
@@ -422,6 +426,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     themeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "ui_theme", themeBox);
 
     addAndMakeVisible(dragMidiButton);
+    addAndMakeVisible(dragChordButton);
     addAndMakeVisible(vuMeter);
     addAndMakeVisible(audioProcessor.getVisualizer());
 
@@ -467,7 +472,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     layerBTypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "layer_b_type", layerBTypeBox);
 
     // ----------------------------------------------------
-    // SECTION 2: SLIDE, FLAVOR & PERFORMANCE (Center Bay)
+    // SECTION 2: SONGWRITING, FLAVOR & SLIDE (Center Bay)
     // ----------------------------------------------------
     slideToggle.setButtonText("SLIDE / GLIDE");
     addAndMakeVisible(slideToggle);
@@ -480,6 +485,21 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
 
     setupSlider(glideTimeSlider, glideTimeLabel, "GLIDE TIME");
     glideTimeAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "glide_time", glideTimeSlider);
+
+    // Songwriting Dropdowns
+    setupComboBox(chordProgBox, chordProgLabel, "CHORD SETS");
+    chordProgBox.addItemList({"Chords Off", "Pop Axis (I-V-vi-IV)", "Dark EDM (i-VI-III-VII)", 
+                              "Emotional (vi-IV-I-V)", "Future Bass (IV-I-vi-V)", "80s Synthwave", 
+                              "50s Doo-Wop", "Royal Road", "Kesha Party Dance"}, 1);
+    chordProgAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "chord_prog_preset", chordProgBox);
+
+    setupComboBox(harmonizerBox, harmonizerLabel, "HARMONIZE");
+    harmonizerBox.addItemList({"Harmonizer Off", "Diatonic 3rds", "Stadium 5ths", "Octave Spread", "Pop Vocal Stack"}, 1);
+    harmonizerAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "harmonizer_mode", harmonizerBox);
+
+    setupComboBox(autoBassBox, autoBassLabel, "AUTO-BASS");
+    autoBassBox.addItemList({"Auto-Bass Off", "Rolling 16ths", "Offbeat 8ths", "4-on-the-Floor", "Nu-Disco Sync"}, 1);
+    autoBassAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "auto_bass_mode", autoBassBox);
 
     setupComboBox(producerFlavorBox, producerFlavorLabel, "PRODUCER FLAVOR");
     producerFlavorBox.addItemList({"Neutral", "Zedd Crunch", "Avicii Warmth", "Max Martin Polish", "Kesha Glitter"}, 1);
@@ -633,7 +653,7 @@ void KeshaZeddSynthAudioProcessorEditor::paint(juce::Graphics& g)
     // 1. Background
     g.fillAll(lookAndFeel.getBgColour());
 
-    // 2. Themed Side Panels (Wood, Teak, Cyber, or Carbon)
+    // 2. Themed Side Panels
     lookAndFeel.drawSidePanels(g, w, h);
 
     // 3. Top Header Bar
@@ -652,7 +672,7 @@ void KeshaZeddSynthAudioProcessorEditor::paint(juce::Graphics& g)
 
     g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
     g.setColour(lookAndFeel.getAccentColour(1));
-    g.drawText("FLAGSHIP EDITION", 22, 24, 95, 12, juce::Justification::centredLeft);
+    g.drawText("HITMAKER EDITION", 22, 24, 95, 12, juce::Justification::centredLeft);
 
     // 4. Central OLED Screen Bezel Frame
     g.setColour(juce::Colour(0xff090a0e));
@@ -678,7 +698,7 @@ void KeshaZeddSynthAudioProcessorEditor::paint(juce::Graphics& g)
     };
 
     drawSection(16, 118, 268, 430, "Sound Engine & Hybrid", lookAndFeel.getAccentColour(0));
-    drawSection(292, 118, 276, 430, "Performance & Flavors", lookAndFeel.getAccentColour(1));
+    drawSection(292, 118, 276, 430, "Songwriting & Performance", lookAndFeel.getAccentColour(1));
     drawSection(576, 118, 268, 430, "Effects & Space", lookAndFeel.getAccentColour(2));
 }
 
@@ -688,22 +708,21 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     // Header Bar Layout (y: 0 to 46)
     // ----------------------------------------------------
     prevPresetButton.setBounds(116, 11, 18, 24);
-    presetBox.setBounds(136, 11, 168, 24);
-    nextPresetButton.setBounds(306, 11, 18, 24);
+    presetBox.setBounds(136, 11, 165, 24);
+    nextPresetButton.setBounds(303, 11, 18, 24);
 
-    savePresetButton.setBounds(328, 11, 38, 24);
-    loadPresetButton.setBounds(368, 11, 38, 24);
-    diceButton.setBounds(408, 11, 38, 24);
+    savePresetButton.setBounds(324, 11, 36, 24);
+    loadPresetButton.setBounds(362, 11, 36, 24);
+    diceButton.setBounds(400, 11, 36, 24);
 
-    zeddifyButton.setBounds(450, 11, 64, 24);
-    zeddifyStyleBox.setBounds(516, 11, 80, 24);
+    zeddifyButton.setBounds(440, 11, 58, 24);
+    zeddifyStyleBox.setBounds(500, 11, 74, 24);
+    mutateButton.setBounds(576, 11, 44, 24);
 
-    autoMasterButton.setBounds(600, 11, 78, 24);
-    themeBox.setBounds(682, 11, 70, 24);
-    dragMidiButton.setBounds(756, 11, 62, 24);
-
-    masterVolSlider.setBounds(820, 8, 30, 32);
-    vuMeter.setBounds(851, 10, 5, 28);
+    autoMasterButton.setBounds(624, 11, 72, 24);
+    themeBox.setBounds(698, 11, 62, 24);
+    dragMidiButton.setBounds(762, 11, 56, 24);
+    dragChordButton.setBounds(820, 11, 58, 24);
 
     // ----------------------------------------------------
     // Central OLED Screen (y: 54 to 110)
@@ -744,46 +763,58 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     layerBTypeBox.setBounds(26, 375, 244, 22);
 
     // ----------------------------------------------------
-    // Section 2: Performance & Flavors (x: 292, y: 118, w: 276, h: 430)
+    // Section 2: Songwriting & Performance (x: 292, y: 118, w: 276, h: 430)
     // ----------------------------------------------------
-    slideToggle.setBounds(304, 144, 105, 24);
+    // Row 1: Songwriting Dropdowns (y: 135)
+    chordProgLabel.setBounds(300, 134, 130, 13);
+    chordProgBox.setBounds(300, 147, 130, 22);
 
-    glideTimeLabel.setBounds(415, 132, 65, 13);
-    glideTimeSlider.setBounds(415, 144, 65, 50);
+    harmonizerLabel.setBounds(435, 134, 125, 13);
+    harmonizerBox.setBounds(435, 147, 125, 22);
 
-    producerFlavorLabel.setBounds(304, 178, 120, 13);
-    producerFlavorBox.setBounds(304, 192, 120, 22);
+    // Row 2: Auto-Bass & Slide (y: 175)
+    autoBassLabel.setBounds(300, 175, 130, 13);
+    autoBassBox.setBounds(300, 188, 130, 22);
 
-    producerFlavorIntensityLabel.setBounds(435, 178, 65, 13);
-    producerFlavorIntensitySlider.setBounds(435, 190, 65, 48);
+    slideToggle.setBounds(435, 186, 125, 24);
 
-    riserToggle.setBounds(304, 228, 140, 24);
+    // Row 3: Producer Flavor & Intensity (y: 218)
+    producerFlavorLabel.setBounds(300, 218, 130, 13);
+    producerFlavorBox.setBounds(300, 231, 130, 22);
 
-    // Envelopes (y: 265)
-    ampAttackLabel.setBounds(300, 262, 58, 13);
-    ampAttackSlider.setBounds(300, 274, 58, 48);
+    producerFlavorIntensityLabel.setBounds(435, 218, 60, 13);
+    producerFlavorIntensitySlider.setBounds(435, 230, 60, 48);
 
-    ampDecayLabel.setBounds(362, 262, 58, 13);
-    ampDecaySlider.setBounds(362, 274, 58, 48);
+    glideTimeLabel.setBounds(500, 218, 60, 13);
+    glideTimeSlider.setBounds(500, 230, 60, 48);
 
-    ampSustainLabel.setBounds(424, 262, 58, 13);
-    ampSustainSlider.setBounds(424, 274, 58, 48);
+    // Envelopes (y: 285)
+    ampAttackLabel.setBounds(300, 282, 58, 13);
+    ampAttackSlider.setBounds(300, 294, 58, 46);
 
-    ampReleaseLabel.setBounds(486, 262, 58, 13);
-    ampReleaseSlider.setBounds(486, 274, 58, 48);
+    ampDecayLabel.setBounds(362, 282, 58, 13);
+    ampDecaySlider.setBounds(362, 294, 58, 46);
 
-    // Macros & Scale Lock (y: 335)
-    macroDropLabel.setBounds(304, 330, 70, 13);
-    macroDropSlider.setBounds(304, 342, 70, 52);
+    ampSustainLabel.setBounds(424, 282, 58, 13);
+    ampSustainSlider.setBounds(424, 294, 58, 46);
 
-    punchLabel.setBounds(380, 330, 70, 13);
-    punchSlider.setBounds(380, 342, 70, 52);
+    ampReleaseLabel.setBounds(486, 282, 58, 13);
+    ampReleaseSlider.setBounds(486, 294, 58, 46);
 
-    scaleRootLabel.setBounds(460, 330, 45, 13);
-    scaleRootBox.setBounds(460, 344, 45, 22);
+    // Macros & Scale Lock (y: 350)
+    macroDropLabel.setBounds(300, 348, 65, 13);
+    macroDropSlider.setBounds(300, 360, 65, 52);
 
-    scaleTypeLabel.setBounds(508, 330, 50, 13);
-    scaleTypeBox.setBounds(508, 344, 50, 22);
+    punchLabel.setBounds(370, 348, 65, 13);
+    punchSlider.setBounds(370, 360, 65, 52);
+
+    scaleRootLabel.setBounds(445, 348, 45, 13);
+    scaleRootBox.setBounds(445, 362, 45, 22);
+
+    scaleTypeLabel.setBounds(495, 348, 65, 13);
+    scaleTypeBox.setBounds(495, 362, 65, 22);
+
+    riserToggle.setBounds(300, 418, 255, 22);
 
     // ----------------------------------------------------
     // Section 3: Effects & Space (x: 576, y: 118, w: 268, h: 430)

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
+#include <random>
 
 class ZeddifyEngine
 {
@@ -14,7 +15,14 @@ public:
         AviciiAnthem = 1,
         EurodanceRiff = 2,
         SynthwaveRoll = 3,
-        TropicalStrum = 4
+        TropicalStrum = 4,
+        NuDiscoStabs = 5,
+        FutureRave = 6,
+        SlapHouseTriplet = 7,
+        HyperpopGlitch = 8,
+        TrapHalfTime = 9,
+        Acid303Roll = 10,
+        StadiumStabs = 11
     };
 
     struct Step
@@ -34,7 +42,43 @@ public:
 
     void setSampleRate(double sRate) { sampleRate = sRate; }
     void setBpm(double bpm) { hostBpm = bpm; }
-    void setPatternStyle(int style) { currentStyle = juce::jlimit(0, 4, style); }
+    void setPatternStyle(int style) { currentStyle = juce::jlimit(0, 11, style); }
+
+    void mutateCurrentPattern()
+    {
+        auto& activePattern = patterns[static_cast<size_t>(currentStyle)];
+        juce::Random rand;
+
+        for (int i = 0; i < 64; ++i)
+        {
+            auto& step = activePattern[static_cast<size_t>(i)];
+            
+            // 4th bar (steps 48-63): Injcet octave jumps or fills
+            if (i >= 48)
+            {
+                if (rand.nextFloat() > 0.4f)
+                {
+                    step.active = true;
+                    step.semitoneOffset = (rand.nextFloat() > 0.5f) ? 24 : 12;
+                    step.velocity = 0.95f;
+                }
+            }
+            // Passing notes & variations
+            else if (rand.nextFloat() > 0.75f)
+            {
+                if (!step.active)
+                {
+                    step.active = true;
+                    step.semitoneOffset = (rand.nextFloat() > 0.5f) ? 7 : 12;
+                    step.velocity = 0.75f;
+                }
+                else
+                {
+                    step.velocity = juce::jlimit(0.5f, 1.0f, step.velocity + rand.nextFloat() * 0.2f - 0.1f);
+                }
+            }
+        }
+    }
 
     void processMidiBlock(juce::MidiBuffer& midiMessages, bool zeddifyActive, int numSamples)
     {
@@ -106,7 +150,6 @@ public:
             return;
         }
 
-        // 16th note length in samples
         double secondsPerBeat = 60.0 / std::max(20.0, hostBpm);
         double secondsPer16th = secondsPerBeat * 0.25;
         int samplesPer16th = static_cast<int>(secondsPer16th * sampleRate);
@@ -186,11 +229,11 @@ public:
 private:
     void initPatterns()
     {
-        patterns.resize(5);
-        for (int p = 0; p < 5; ++p)
+        patterns.resize(12);
+        for (int p = 0; p < 12; ++p)
             patterns[static_cast<size_t>(p)].resize(64);
 
-        // Pattern 0: Zedd 16th Octave Bounce
+        // 0. Zedd 16th Bounce
         auto& zedd = patterns[0];
         for (int i = 0; i < 64; ++i)
         {
@@ -213,16 +256,13 @@ private:
             else if (sub16 == 15) zedd[static_cast<size_t>(i)] = { true, 12, 0.80f, 0.8f };
         }
 
-        // Pattern 1: Avicii Progressive Anthem
+        // 1. Avicii Progressive Anthem
         auto& avicii = patterns[1];
         static const int aviciiOffsets[16] = { 0, 0, 7, 7, 12, 12, 10, 7, 5, 5, 7, 7, 12, 15, 12, 7 };
         for (int i = 0; i < 64; ++i)
-        {
-            int sub16 = i % 16;
-            avicii[static_cast<size_t>(i)] = { true, aviciiOffsets[sub16], 0.88f, 0.85f };
-        }
+            avicii[static_cast<size_t>(i)] = { true, aviciiOffsets[i % 16], 0.88f, 0.85f };
 
-        // Pattern 2: Eurodance Offbeat Riff
+        // 2. Eurodance Offbeat Riff
         auto& euro = patterns[2];
         for (int i = 0; i < 64; ++i)
         {
@@ -232,26 +272,78 @@ private:
             else euro[static_cast<size_t>(i)] = { false, 0, 0.0f, 0.0f };
         }
 
-        // Pattern 3: Synthwave 16th Roll
+        // 3. Synthwave 16th Roll
         auto& synthwave = patterns[3];
         for (int i = 0; i < 64; ++i)
         {
             int sub16 = i % 8;
             int oct = (sub16 == 0 || sub16 == 4) ? 0 : 12;
-            float vel = (sub16 == 0 || sub16 == 4) ? 0.95f : 0.78f;
-            synthwave[static_cast<size_t>(i)] = { true, oct, vel, 0.70f };
+            synthwave[static_cast<size_t>(i)] = { true, oct, (sub16 == 0) ? 0.95f : 0.78f, 0.70f };
         }
 
-        // Pattern 4: Tropical Pop Strum
+        // 4. Tropical Pop Strum
         auto& trop = patterns[4];
         static const int tropOffsets[16] = { 0, 7, 12, 15, -1, 0, 7, 12, -1, -1, 0, 7, 12, 15, 12, 7 };
         for (int i = 0; i < 64; ++i)
         {
-            int sub16 = i % 16;
-            if (tropOffsets[sub16] >= 0)
-                trop[static_cast<size_t>(i)] = { true, tropOffsets[sub16], 0.85f, 0.60f };
-            else
-                trop[static_cast<size_t>(i)] = { false, 0, 0.0f, 0.0f };
+            int off = tropOffsets[i % 16];
+            trop[static_cast<size_t>(i)] = (off >= 0) ? Step{ true, off, 0.85f, 0.60f } : Step{ false, 0, 0.0f, 0.0f };
+        }
+
+        // 5. Nu-Disco Funk Stabs (Dua Lipa)
+        auto& disco = patterns[5];
+        static const int discoOffsets[16] = { 0, -1, 12, 0, -1, 12, -1, 0, -1, 12, 12, -1, 0, 12, -1, 0 };
+        for (int i = 0; i < 64; ++i)
+        {
+            int off = discoOffsets[i % 16];
+            disco[static_cast<size_t>(i)] = (off >= 0) ? Step{ true, off, 0.92f, 0.50f } : Step{ false, 0, 0.0f, 0.0f };
+        }
+
+        // 6. Future Rave Gallop (Guetta / Morten)
+        auto& rave = patterns[6];
+        static const int raveOffsets[16] = { 0, 0, 12, 0, 0, 12, 0, 0, 12, 0, 12, 12, 0, 0, 12, 24 };
+        for (int i = 0; i < 64; ++i)
+            rave[static_cast<size_t>(i)] = { true, raveOffsets[i % 16], 0.92f, 0.65f };
+
+        // 7. Slap House Triplet Groove
+        auto& slap = patterns[7];
+        static const int slapOffsets[16] = { 0, -1, 0, -1, 12, -1, 0, 12, -1, 0, -1, 12, 0, -1, 12, -1 };
+        for (int i = 0; i < 64; ++i)
+        {
+            int off = slapOffsets[i % 16];
+            slap[static_cast<size_t>(i)] = (off >= 0) ? Step{ true, off, 0.94f, 0.45f } : Step{ false, 0, 0.0f, 0.0f };
+        }
+
+        // 8. Hyperpop Glitch 32nds
+        auto& hyper = patterns[8];
+        for (int i = 0; i < 64; ++i)
+        {
+            int oct = (i % 2 == 0) ? ((i % 4 == 0) ? 0 : 12) : 24;
+            hyper[static_cast<size_t>(i)] = { true, oct, 0.88f, 0.40f };
+        }
+
+        // 9. Trap Half-Time Roll
+        auto& trap = patterns[9];
+        static const int trapOffsets[16] = { 0, -1, -1, -1, 7, -1, -1, -1, 12, -1, -1, -1, 15, -1, 12, -1 };
+        for (int i = 0; i < 64; ++i)
+        {
+            int off = trapOffsets[i % 16];
+            trap[static_cast<size_t>(i)] = (off >= 0) ? Step{ true, off, 0.85f, 0.70f } : Step{ false, 0, 0.0f, 0.0f };
+        }
+
+        // 10. Acid 303 Rolling Bass
+        auto& acid = patterns[10];
+        static const int acidOffsets[16] = { 0, 12, 0, 0, 12, 0, 7, 12, 0, 0, 12, 19, 0, 12, 0, 24 };
+        for (int i = 0; i < 64; ++i)
+            acid[static_cast<size_t>(i)] = { true, acidOffsets[i % 16], (i % 4 == 0) ? 0.98f : 0.80f, 0.75f };
+
+        // 11. Stadium Anthem Stabs
+        auto& stadium = patterns[11];
+        static const int stadiumOffsets[16] = { 0, -1, -1, 0, -1, -1, 0, -1, -1, 0, -1, 0, -1, 0, -1, -1 };
+        for (int i = 0; i < 64; ++i)
+        {
+            int off = stadiumOffsets[i % 16];
+            stadium[static_cast<size_t>(i)] = (off >= 0) ? Step{ true, off, 0.98f, 0.85f } : Step{ false, 0, 0.0f, 0.0f };
         }
     }
 

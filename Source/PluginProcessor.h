@@ -14,6 +14,9 @@
 #include "ProducerFlavor.h"
 #include "RiserEngine.h"
 #include "ScaleManager.h"
+#include "ChordProgressionEngine.h"
+#include "HarmonizerEngine.h"
+#include "AutoBassEngine.h"
 
 class KeshaZeddSynthAudioProcessor : public juce::AudioProcessor
 {
@@ -57,6 +60,9 @@ public:
     ProducerFlavorProcessor& getProducerFlavor() { return producerFlavor; }
     RiserEngine& getRiserEngine() { return riserEngine; }
     ScaleManager& getScaleManager() { return scaleManager; }
+    ChordProgressionEngine& getChordProgEngine() { return chordProgEngine; }
+    HarmonizerEngine& getHarmonizerEngine() { return harmonizerEngine; }
+    AutoBassEngine& getAutoBassEngine() { return autoBassEngine; }
     
     int getActiveVoiceCount() const { return activeVoiceCount.load(); }
 
@@ -83,6 +89,9 @@ private:
     ProducerFlavorProcessor producerFlavor;
     RiserEngine riserEngine;
     ScaleManager scaleManager;
+    ChordProgressionEngine chordProgEngine;
+    HarmonizerEngine harmonizerEngine;
+    AutoBassEngine autoBassEngine;
 
     int currentPresetIndex = 0;
     std::atomic<int> activeVoiceCount { 0 };

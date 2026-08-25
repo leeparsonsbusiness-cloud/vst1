@@ -10,11 +10,12 @@ using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
 using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
 using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
-// Drag-and-Drop MIDI Export Handle Component
+// Drag-and-Drop MIDI Export Handle Component (for Zeddify Melodies or Chords)
 class DragMidiButton : public juce::Component
 {
 public:
-    DragMidiButton(KeshaZeddSynthAudioProcessor& p) : processor(p) {}
+    DragMidiButton(KeshaZeddSynthAudioProcessor& p, bool forChords = false) 
+        : processor(p), isChordExport(forChords) {}
     ~DragMidiButton() override = default;
 
     void paint(juce::Graphics& g) override
@@ -25,12 +26,16 @@ public:
         g.setColour(bgColour);
         g.fillRoundedRectangle(bounds, 4.0f);
 
-        g.setColour(isHovered ? juce::Colour(0xffff9900) : juce::Colour(0xff3a3e52));
+        juce::Colour borderCol = isChordExport ? (isHovered ? juce::Colour(0xff00d4ff) : juce::Colour(0xff2b4555))
+                                              : (isHovered ? juce::Colour(0xffff9900) : juce::Colour(0xff3a3e52));
+        g.setColour(borderCol);
         g.drawRoundedRectangle(bounds, 4.0f, 1.2f);
 
-        g.setColour(isHovered ? juce::Colour(0xffffaa33) : juce::Colour(0xffc5cad8));
-        g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
-        g.drawText("EXPORT MIDI", bounds, juce::Justification::centred, false);
+        juce::Colour textCol = isChordExport ? (isHovered ? juce::Colour(0xff88eaff) : juce::Colour(0xff9ec7d8))
+                                             : (isHovered ? juce::Colour(0xffffaa33) : juce::Colour(0xffc5cad8));
+        g.setColour(textCol);
+        g.setFont(juce::FontOptions(9.5f, juce::Font::bold));
+        g.drawText(isChordExport ? "CHORD MIDI" : "EXPORT MIDI", bounds, juce::Justification::centred, false);
     }
 
     void mouseEnter(const juce::MouseEvent&) override { isHovered = true; repaint(); }
@@ -38,15 +43,29 @@ public:
 
     void mouseDrag(const juce::MouseEvent&) override
     {
-        juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("zeddify_riff.mid");
-        if (processor.getZeddifyEngine().exportToMidiFile(60, tempFile))
+        if (isChordExport)
         {
-            juce::DragAndDropContainer::performExternalDragDropOfFiles({ tempFile.getFullPathName() }, false, this);
+            juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("chord_progression.mid");
+            int prog = static_cast<int>(processor.getAPVTS().getRawParameterValue("chord_prog_preset")->load());
+            int root = static_cast<int>(processor.getAPVTS().getRawParameterValue("scale_root")->load());
+            if (processor.getChordProgEngine().exportProgressionMidi(prog, root, tempFile))
+            {
+                juce::DragAndDropContainer::performExternalDragDropOfFiles({ tempFile.getFullPathName() }, false, this);
+            }
+        }
+        else
+        {
+            juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("zeddify_riff.mid");
+            if (processor.getZeddifyEngine().exportToMidiFile(60, tempFile))
+            {
+                juce::DragAndDropContainer::performExternalDragDropOfFiles({ tempFile.getFullPathName() }, false, this);
+            }
         }
     }
 
 private:
     KeshaZeddSynthAudioProcessor& processor;
+    bool isChordExport = false;
     bool isHovered = false;
 };
 
@@ -113,10 +132,7 @@ private:
 class PresetComboBox : public juce::ComboBox
 {
 public:
-    PresetComboBox()
-    {
-        setEditableText(false);
-    }
+    PresetComboBox() { setEditableText(false); }
     ~PresetComboBox() override = default;
     
     std::function<void(int)> onPresetSelected;
@@ -272,7 +288,7 @@ private:
     bool menuShowing = false;
 };
 
-// Modern Synth LookAndFeel with 4-Skin Theme Engine
+// LookAndFeel with 4 Theme Skins
 class ModernSynthLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
@@ -343,7 +359,9 @@ private:
     juce::TextButton nextPresetButton;
     juce::ToggleButton zeddifyButton;
     juce::ComboBox zeddifyStyleBox;
+    juce::TextButton mutateButton;
     DragMidiButton dragMidiButton;
+    DragMidiButton dragChordButton;
 
     // Master Volume, Auto-Master & Theme
     juce::Slider masterVolSlider;
@@ -382,11 +400,18 @@ private:
     juce::Label layerBTypeLabel;
 
     // ----------------------------------------------------
-    // SECTION 2: SLIDE, FLAVOR & PERFORMANCE (Center Bay)
+    // SECTION 2: SONGWRITING, FLAVOR & SLIDE (Center Bay)
     // ----------------------------------------------------
     juce::ToggleButton slideToggle;
     juce::Slider glideTimeSlider;
     juce::Label glideTimeLabel;
+
+    juce::ComboBox chordProgBox;
+    juce::Label chordProgLabel;
+    juce::ComboBox harmonizerBox;
+    juce::Label harmonizerLabel;
+    juce::ComboBox autoBassBox;
+    juce::Label autoBassLabel;
 
     juce::ComboBox producerFlavorBox;
     juce::Label producerFlavorLabel;
@@ -454,6 +479,9 @@ private:
     std::unique_ptr<ComboBoxAttachment> layerBTypeAttachment;
 
     std::unique_ptr<SliderAttachment> glideTimeAttachment;
+    std::unique_ptr<ComboBoxAttachment> chordProgAttachment;
+    std::unique_ptr<ComboBoxAttachment> harmonizerAttachment;
+    std::unique_ptr<ComboBoxAttachment> autoBassAttachment;
     std::unique_ptr<ComboBoxAttachment> producerFlavorAttachment;
     std::unique_ptr<SliderAttachment> producerFlavorIntensityAttachment;
     std::unique_ptr<ButtonAttachment> riserAttachment;

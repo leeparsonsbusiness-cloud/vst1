@@ -39,6 +39,7 @@ void KeshaZeddSynthAudioProcessor::prepareToPlay(double sampleRate, int samplesP
     riserEngine.prepare(sampleRate);
 
     zeddifyEngine.setSampleRate(sampleRate);
+    autoBassEngine.setSampleRate(sampleRate);
 
     heldNotes.clear();
     activeLegatoNote = -1;
@@ -101,7 +102,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         }
     }
 
-    // Pass Host BPM to SynthVoices, PostFX & Zeddify Engine
+    // Pass Host BPM to Engines
     for (int i = 0; i < synth.getNumVoices(); ++i)
     {
         if (auto* voice = dynamic_cast<SynthVoice*>(synth.getVoice(i)))
@@ -111,6 +112,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         }
     }
     zeddifyEngine.setBpm(bpm);
+    autoBassEngine.setBpm(bpm);
 
     // Update Zeddify Pattern Style
     int zeddStyle = static_cast<int>(apvts.getRawParameterValue("zeddify_style")->load());
@@ -122,11 +124,23 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     float strumMs = apvts.getRawParameterValue("chord_strum_ms")->load();
     scaleManager.processMidi(midiMessages, scaleRoot, scaleType, strumMs, getSampleRate(), buffer.getNumSamples());
 
-    // 2. Process Zeddify Algorithmic Melody Engine on incoming MIDI
+    // 2. One-Finger Chord Progression Engine
+    int chordProg = static_cast<int>(apvts.getRawParameterValue("chord_prog_preset")->load());
+    chordProgEngine.processMidi(midiMessages, chordProg, scaleRoot, scaleType, buffer.getNumSamples());
+
+    // 3. Real-Time Auto-Harmonizer
+    int harmMode = static_cast<int>(apvts.getRawParameterValue("harmonizer_mode")->load());
+    harmonizerEngine.processMidi(midiMessages, harmMode, scaleRoot, scaleType);
+
+    // 4. Auto-Bassline Follower Engine
+    int autoBassMode = static_cast<int>(apvts.getRawParameterValue("auto_bass_mode")->load());
+    autoBassEngine.processMidi(midiMessages, autoBassMode, buffer.getNumSamples());
+
+    // 5. Process Zeddify Algorithmic Melody Engine on incoming MIDI
     bool zeddifyActive = apvts.getRawParameterValue("zeddify_active")->load() > 0.5f;
     zeddifyEngine.processMidiBlock(midiMessages, zeddifyActive, buffer.getNumSamples());
 
-    // 3. Process Arpeggiator on MIDI
+    // 6. Process Arpeggiator on MIDI
     int arpMode = static_cast<int>(apvts.getRawParameterValue("arp_mode")->load());
     arpeggiator.setMode(arpMode);
     arpeggiator.processMidiBlock(midiMessages, getSampleRate(), bpm, buffer.getNumSamples());
@@ -136,9 +150,9 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     bool chordMode = apvts.getRawParameterValue("chord_mode")->load() > 0.5f;
     int chordType = static_cast<int>(apvts.getRawParameterValue("chord_type")->load());
 
-    // 4. Smart Chord Stacking
+    // 7. Smart Chord Stacking
     juce::MidiBuffer processedMidi;
-    if (chordMode)
+    if (chordMode && chordProg == 0)
     {
         for (const auto metadata : midiMessages)
         {
@@ -179,7 +193,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         processedMidi = midiMessages;
     }
 
-    // 5. Play Mode Routing (Poly, Mono Legato, Mono Retrig)
+    // 8. Play Mode Routing (Poly, Mono Legato, Mono Retrig)
     juce::MidiBuffer finalMidi;
     if (playMode == 1) // Mono Legato
     {
@@ -309,7 +323,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         finalMidi = processedMidi;
     }
 
-    // 6. Check Riser Pitch Bend Offset
+    // 9. Check Riser Pitch Bend Offset
     bool riserActive = apvts.getRawParameterValue("riser_active")->load() > 0.5f;
     float riserProgress = apvts.getRawParameterValue("riser_progress")->load();
     if (riserActive && riserProgress > 0.001f)
@@ -322,7 +336,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
         }
     }
 
-    // 7. Render Voices into 3-channel temporary buffer (Synth in 0/1, Mono Sub in 2)
+    // 10. Render Voices into 3-channel temporary buffer (Synth in 0/1, Mono Sub in 2)
     const int numSamples = buffer.getNumSamples();
     juce::AudioBuffer<float> tempBuffer(3, numSamples);
     tempBuffer.clear();
@@ -334,10 +348,10 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     if (totalNumOutputChannels > 1)
         buffer.copyFrom(1, 0, tempBuffer, 1, 0, numSamples);
 
-    // 8. Process Post FX Chain (Chorus, Delay, Reverb, Trash/Gloss, Sidechain, Mono-Maker)
+    // 11. Process Post FX Chain (Chorus, Delay, Reverb, Trash/Gloss, Sidechain, Mono-Maker)
     postFX.process(buffer, apvts, timeInSeconds, bpm, ppqPosition, isPlaying);
 
-    // 9. Mix Sub-Oscillator (Channel 2 of tempBuffer) back directly into output buffer
+    // 12. Mix Sub-Oscillator (Channel 2 of tempBuffer) back directly into output buffer
     float subLevel = apvts.getRawParameterValue("sub_level")->load();
     if (subLevel > 0.001f)
     {
@@ -346,33 +360,33 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
             buffer.addFrom(1, 0, tempBuffer, 2, 0, numSamples);
     }
 
-    // 10. Expanded FX Suite (Bitcrusher, Wavefolder, Phaser/Flanger)
+    // 13. Expanded FX Suite (Bitcrusher, Wavefolder, Phaser/Flanger)
     expandedFX.process(buffer, apvts);
 
-    // 11. Producer Flavor Processing
+    // 14. Producer Flavor Processing
     int flavorIdx = static_cast<int>(apvts.getRawParameterValue("producer_flavor")->load());
     float flavorIntensity = apvts.getRawParameterValue("producer_flavor_intensity")->load();
     producerFlavor.process(buffer, flavorIdx, flavorIntensity);
 
-    // 12. The Riser / Buildup Processing
+    // 15. The Riser / Buildup Processing
     riserEngine.process(buffer, riserActive, riserProgress, bpm);
 
-    // 13. Auto-Master One-Click Polish Stage
+    // 16. Auto-Master One-Click Polish Stage
     bool autoMasterActive = apvts.getRawParameterValue("auto_master_active")->load() > 0.5f;
     float autoMasterIntensity = apvts.getRawParameterValue("auto_master_intensity")->load();
     autoMaster.process(buffer, autoMasterActive, autoMasterIntensity);
 
-    // 14. Master Volume scaling
+    // 17. Master Volume scaling
     float masterVol = apvts.getRawParameterValue("master_vol")->load();
     buffer.applyGain(masterVol);
 
-    // 15. Stream to Visualizer FFT & Scope
+    // 18. Stream to Visualizer FFT & Scope
     visualizer.pushSampleBlock(buffer.getReadPointer(0), numSamples);
     float currentCutoff = apvts.getRawParameterValue("filter_cutoff")->load();
     float currentRes = apvts.getRawParameterValue("filter_res")->load();
     visualizer.setFilterCutoffAndRes(currentCutoff, currentRes);
 
-    // 16. Track Peak Levels for UI VU Meter
+    // 19. Track Peak Levels for UI VU Meter
     float peakL = buffer.getMagnitude(0, 0, numSamples);
     float peakR = (totalNumOutputChannels > 1) ? buffer.getMagnitude(1, 0, numSamples) : peakL;
     outputLevelL.store(peakL);
@@ -391,7 +405,8 @@ void KeshaZeddSynthAudioProcessor::randomizeParameters()
                 rangedParam->paramID == "play_mode" ||
                 rangedParam->paramID == "chord_mode" ||
                 rangedParam->paramID == "chord_type" ||
-                rangedParam->paramID == "ui_theme")
+                rangedParam->paramID == "ui_theme" ||
+                rangedParam->paramID == "chord_prog_preset")
             {
                 continue;
             }
@@ -614,13 +629,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("scale_type", 1), "Scale Type Lock", 0, 6, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("chord_strum_ms", 1), "Chord Strum Humanize", 0.0f, 100.0f, 0.0f));
 
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("zeddify_style", 1), "Zeddify Pattern Style", 0, 4, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("zeddify_style", 1), "Zeddify Pattern Style", 0, 11, 0));
 
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("analog_drift", 1), "Analog VCO Drift", 0.0f, 1.0f, 0.25f));
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("layer_b_type", 1), "Layer B Hybrid Type", 0, 5, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("layer_b_mix", 1), "Layer B Hybrid Mix", 0.0f, 1.0f, 0.0f));
 
     params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("ui_theme", 1), "UI Theme", 0, 3, 0));
+
+    // Songwriting Suite Additions
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("chord_prog_preset", 1), "Chord Sets Progression", 0, 8, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("harmonizer_mode", 1), "Auto Harmonizer", 0, 4, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("auto_bass_mode", 1), "Auto Bassline Follower", 0, 4, 0));
 
     return { params.begin(), params.end() };
 }
