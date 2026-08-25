@@ -10,6 +10,128 @@ using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
 using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
 using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
 
+// Interactive FL Studio Envelope Graph Display Component
+class FLEnvelopeDisplayComponent : public juce::Component
+{
+public:
+    FLEnvelopeDisplayComponent(KeshaZeddSynthAudioProcessor& p) : processor(p) {}
+    ~FLEnvelopeDisplayComponent() override = default;
+
+    void paint(juce::Graphics& g) override
+    {
+        auto bounds = getLocalBounds().toFloat().reduced(2.0f);
+        
+        // Dark LCD background
+        g.setColour(juce::Colour(0xff12161b));
+        g.fillRoundedRectangle(bounds, 3.0f);
+
+        g.setColour(juce::Colour(0xff242b36));
+        g.drawRoundedRectangle(bounds, 3.0f, 1.0f);
+
+        // Fetch envelope values
+        float delayVal = (processor.getAPVTS().getRawParameterValue("env_delay") != nullptr) ? processor.getAPVTS().getRawParameterValue("env_delay")->load() : 0.0f;
+        float attVal   = processor.getAPVTS().getRawParameterValue("amp_attack")->load();
+        float holdVal  = (processor.getAPVTS().getRawParameterValue("env_hold") != nullptr) ? processor.getAPVTS().getRawParameterValue("env_hold")->load() : 0.0f;
+        float decVal   = processor.getAPVTS().getRawParameterValue("amp_decay")->load();
+        float susVal   = processor.getAPVTS().getRawParameterValue("amp_sustain")->load();
+        float relVal   = processor.getAPVTS().getRawParameterValue("amp_release")->load();
+        float decTension = (processor.getAPVTS().getRawParameterValue("env_dec_tension") != nullptr) ? processor.getAPVTS().getRawParameterValue("env_dec_tension")->load() : 1.0f;
+
+        float totalTime = std::max(0.2f, delayVal + attVal + holdVal + decVal + relVal);
+        float w = bounds.getWidth() - 16.0f;
+        float startX = bounds.getX() + 8.0f;
+        float startY = bounds.getBottom() - 6.0f;
+        float topY = bounds.getY() + 6.0f;
+
+        float x0 = startX;
+        float y0 = startY;
+
+        float x1 = x0 + (delayVal / totalTime) * w;
+        float y1 = startY;
+
+        float x2 = x1 + (attVal / totalTime) * w;
+        float y2 = topY;
+
+        float x3 = x2 + (holdVal / totalTime) * w;
+        float y3 = topY;
+
+        float x4 = x3 + (decVal / totalTime) * w;
+        float y4 = startY - susVal * (startY - topY);
+
+        float x5 = x4 + 20.0f; // Sustain visual segment
+        float y5 = y4;
+
+        float x6 = std::min(bounds.getRight() - 8.0f, x5 + (relVal / totalTime) * w);
+        float y6 = startY;
+
+        // Draw Envelope Fill
+        juce::Path fillPath;
+        fillPath.startNewSubPath(x0, y0);
+        fillPath.lineTo(x1, y1);
+        fillPath.lineTo(x2, y2);
+        fillPath.lineTo(x3, y3);
+
+        // Decay curve with tension
+        int numCurvSteps = 12;
+        for (int step = 1; step <= numCurvSteps; ++step)
+        {
+            float prog = static_cast<float>(step) / static_cast<float>(numCurvSteps);
+            float curProg = std::pow(prog, decTension);
+            float curX = x3 + prog * (x4 - x3);
+            float curY = y3 + curProg * (y4 - y3);
+            fillPath.lineTo(curX, curY);
+        }
+
+        fillPath.lineTo(x5, y5);
+        fillPath.lineTo(x6, y6);
+        fillPath.lineTo(x6, startY);
+        fillPath.lineTo(x0, startY);
+        fillPath.closeSubPath();
+
+        g.setColour(juce::Colour(0xff55ee77).withAlpha(0.18f));
+        g.fillPath(fillPath);
+
+        // Draw Envelope Outline
+        juce::Path strokePath;
+        strokePath.startNewSubPath(x0, y0);
+        strokePath.lineTo(x1, y1);
+        strokePath.lineTo(x2, y2);
+        strokePath.lineTo(x3, y3);
+
+        for (int step = 1; step <= numCurvSteps; ++step)
+        {
+            float prog = static_cast<float>(step) / static_cast<float>(numCurvSteps);
+            float curProg = std::pow(prog, decTension);
+            float curX = x3 + prog * (x4 - x3);
+            float curY = y3 + curProg * (y4 - y3);
+            strokePath.lineTo(curX, curY);
+        }
+
+        strokePath.lineTo(x5, y5);
+        strokePath.lineTo(x6, y6);
+
+        g.setColour(juce::Colour(0xff66ff88));
+        g.strokePath(strokePath, juce::PathStrokeType(1.6f));
+
+        // Draw vertex nodes
+        auto drawVertex = [&](float vx, float vy) {
+            g.setColour(juce::Colour(0xff12161b));
+            g.fillEllipse(vx - 3.0f, vy - 3.0f, 6.0f, 6.0f);
+            g.setColour(juce::Colour(0xff88ffaa));
+            g.drawEllipse(vx - 3.0f, vy - 3.0f, 6.0f, 6.0f, 1.2f);
+        };
+
+        drawVertex(x1, y1);
+        drawVertex(x2, y2);
+        drawVertex(x3, y3);
+        drawVertex(x4, y4);
+        drawVertex(x6, y6);
+    }
+
+private:
+    KeshaZeddSynthAudioProcessor& processor;
+};
+
 // Momentary Performance Trigger Pad Component
 class MomentaryPadButton : public juce::Component
 {
@@ -465,12 +587,52 @@ private:
     juce::Label layerBTypeLabel;
 
     // ----------------------------------------------------
-    // SECTION 2: SONGWRITING & MELODY POWER (Center Bay)
+    // SECTION 2: FL STUDIO AHDSR ENVELOPE & ECHO/FAT MODE (Center Bay)
     // ----------------------------------------------------
+    FLEnvelopeDisplayComponent envDisplay;
+
+    // AHDSR + Tension Controls
+    juce::Slider envDelaySlider;
+    juce::Label envDelayLabel;
+    juce::Slider ampAttackSlider;
+    juce::Label ampAttackLabel;
+    juce::Slider envHoldSlider;
+    juce::Label envHoldLabel;
+    juce::Slider ampDecaySlider;
+    juce::Label ampDecayLabel;
+    juce::Slider ampSustainSlider;
+    juce::Label ampSustainLabel;
+    juce::Slider ampReleaseSlider;
+    juce::Label ampReleaseLabel;
+
+    juce::Slider envDecTensionSlider;
+    juce::Label envDecTensionLabel;
+    juce::Slider envRelTensionSlider;
+    juce::Label envRelTensionLabel;
+
+    // FL Studio Echo Delay & Fat Mode
+    juce::Slider echoFeedSlider;
+    juce::Label echoFeedLabel;
+    juce::Slider echoTimeSlider;
+    juce::Label echoTimeLabel;
+    juce::Slider echoPanSlider;
+    juce::Label echoPanLabel;
+    juce::Slider echoPitchSlider;
+    juce::Label echoPitchLabel;
+    juce::Slider echoCountSlider;
+    juce::Label echoCountLabel;
+    juce::ToggleButton echoPingPongToggle;
+    juce::ToggleButton echoFatToggle;
+
+    // FL Studio Time Shift, Gate, Cut Self & Slide
+    juce::Slider timeShiftSlider;
+    juce::Label timeShiftLabel;
+    juce::ToggleButton cutSelfToggle;
     juce::ToggleButton slideToggle;
     juce::Slider glideTimeSlider;
     juce::Label glideTimeLabel;
 
+    // Songwriting Dropdowns
     juce::ComboBox chordProgBox;
     juce::Label chordProgLabel;
     juce::ComboBox harmonizerBox;
@@ -488,27 +650,11 @@ private:
     juce::ToggleButton easyKeyToggle;
     juce::ToggleButton counterMelodyToggle;
 
-    juce::ComboBox producerFlavorBox;
-    juce::Label producerFlavorLabel;
-    juce::Slider producerFlavorIntensitySlider;
-    juce::Label producerFlavorIntensityLabel;
-
-    juce::ToggleButton riserToggle;
-
     // 4 Momentary Glitch Trigger Pads
     std::unique_ptr<MomentaryPadButton> tapeStopPad;
     std::unique_ptr<MomentaryPadButton> stutterPad;
     std::unique_ptr<MomentaryPadButton> divePad;
     std::unique_ptr<MomentaryPadButton> reversePad;
-
-    juce::Slider ampAttackSlider;
-    juce::Label ampAttackLabel;
-    juce::Slider ampDecaySlider;
-    juce::Label ampDecayLabel;
-    juce::Slider ampSustainSlider;
-    juce::Label ampSustainLabel;
-    juce::Slider ampReleaseSlider;
-    juce::Label ampReleaseLabel;
 
     juce::Slider macroDropSlider;
     juce::Label macroDropLabel;
@@ -566,6 +712,26 @@ private:
     std::unique_ptr<ComboBoxAttachment> filterModeAttachment;
     std::unique_ptr<ComboBoxAttachment> layerBTypeAttachment;
 
+    std::unique_ptr<SliderAttachment> envDelayAttachment;
+    std::unique_ptr<SliderAttachment> ampAttackAttachment;
+    std::unique_ptr<SliderAttachment> envHoldAttachment;
+    std::unique_ptr<SliderAttachment> ampDecayAttachment;
+    std::unique_ptr<SliderAttachment> ampSustainAttachment;
+    std::unique_ptr<SliderAttachment> ampReleaseAttachment;
+    std::unique_ptr<SliderAttachment> envDecTensionAttachment;
+    std::unique_ptr<SliderAttachment> envRelTensionAttachment;
+
+    std::unique_ptr<SliderAttachment> echoFeedAttachment;
+    std::unique_ptr<SliderAttachment> echoTimeAttachment;
+    std::unique_ptr<SliderAttachment> echoPanAttachment;
+    std::unique_ptr<SliderAttachment> echoPitchAttachment;
+    std::unique_ptr<SliderAttachment> echoCountAttachment;
+    std::unique_ptr<ButtonAttachment> echoPingPongAttachment;
+    std::unique_ptr<ButtonAttachment> echoFatAttachment;
+
+    std::unique_ptr<SliderAttachment> timeShiftAttachment;
+    std::unique_ptr<ButtonAttachment> cutSelfAttachment;
+
     std::unique_ptr<SliderAttachment> glideTimeAttachment;
     std::unique_ptr<ComboBoxAttachment> chordProgAttachment;
     std::unique_ptr<ComboBoxAttachment> harmonizerAttachment;
@@ -576,14 +742,6 @@ private:
     std::unique_ptr<ButtonAttachment> counterMelodyAttachment;
     std::unique_ptr<SliderAttachment> humanizeAttachment;
 
-    std::unique_ptr<ComboBoxAttachment> producerFlavorAttachment;
-    std::unique_ptr<SliderAttachment> producerFlavorIntensityAttachment;
-    std::unique_ptr<ButtonAttachment> riserAttachment;
-
-    std::unique_ptr<SliderAttachment> ampAttackAttachment;
-    std::unique_ptr<SliderAttachment> ampDecayAttachment;
-    std::unique_ptr<SliderAttachment> ampSustainAttachment;
-    std::unique_ptr<SliderAttachment> ampReleaseAttachment;
     std::unique_ptr<SliderAttachment> macroDropAttachment;
     std::unique_ptr<SliderAttachment> punchAttachment;
     std::unique_ptr<ComboBoxAttachment> scaleRootAttachment;

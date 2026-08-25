@@ -23,6 +23,7 @@
 #include "CounterMelodyEngine.h"
 #include "HumanizerEngine.h"
 #include "MidiVault.h"
+#include "FLEchoDelayEngine.h"
 
 class KeshaZeddSynthAudioProcessor : public juce::AudioProcessor
 {
@@ -75,6 +76,7 @@ public:
     CounterMelodyEngine& getCounterMelodyEngine() { return counterMelodyEngine; }
     HumanizerEngine& getHumanizerEngine() { return humanizerEngine; }
     MidiVault& getMidiVault() { return midiVault; }
+    FLEchoDelayEngine& getFLEchoDelay() { return flEchoDelay; }
     
     int getActiveVoiceCount() const { return activeVoiceCount.load(); }
 
@@ -110,6 +112,7 @@ private:
     CounterMelodyEngine counterMelodyEngine;
     HumanizerEngine humanizerEngine;
     MidiVault midiVault;
+    FLEchoDelayEngine flEchoDelay;
 
     int currentPresetIndex = 0;
     std::atomic<int> activeVoiceCount { 0 };

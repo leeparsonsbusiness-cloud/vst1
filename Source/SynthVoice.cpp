@@ -215,12 +215,17 @@ void SynthVoice::updateParameters(juce::AudioProcessorValueTreeState& apvts)
     float aSustain = apvts.getRawParameterValue("amp_sustain")->load();
     float aRelease = apvts.getRawParameterValue("amp_release")->load();
 
+    float envDelay = (apvts.getRawParameterValue("env_delay") != nullptr) ? apvts.getRawParameterValue("env_delay")->load() : 0.0f;
+    float envHold = (apvts.getRawParameterValue("env_hold") != nullptr) ? apvts.getRawParameterValue("env_hold")->load() : 0.0f;
+    float decTension = (apvts.getRawParameterValue("env_dec_tension") != nullptr) ? apvts.getRawParameterValue("env_dec_tension")->load() : 1.0f;
+    float relTension = (apvts.getRawParameterValue("env_rel_tension") != nullptr) ? apvts.getRawParameterValue("env_rel_tension")->load() : 1.0f;
+
     // Scale envelopes with macro punch
     float punch = apvts.getRawParameterValue("macro_punch")->load();
     aAttack = aAttack * (1.0f - punch * 0.85f);
     transientLevel = juce::jlimit(0.0f, 1.0f, transientLevel + punch * 0.5f);
 
-    ampEnv.setParameters(aAttack, aDecay, aSustain, aRelease, ampDecayCurve);
+    ampEnv.setParameters(aAttack, aDecay, aSustain, aRelease, decTension, envDelay, envHold, relTension);
 
     float fAttack = apvts.getRawParameterValue("filter_attack")->load();
     float fDecay = apvts.getRawParameterValue("filter_decay")->load();
@@ -228,7 +233,7 @@ void SynthVoice::updateParameters(juce::AudioProcessorValueTreeState& apvts)
     float fRelease = apvts.getRawParameterValue("filter_release")->load();
     fAttack = fAttack * (1.0f - punch * 0.85f);
 
-    filterEnv.setParameters(fAttack, fDecay, fSustain, fRelease, filterDecayCurve);
+    filterEnv.setParameters(fAttack, fDecay, fSustain, fRelease, decTension, envDelay, envHold, relTension);
 
     // Pitch Drop parameters
     pitchDropActive = apvts.getRawParameterValue("pitch_drop_active")->load() > 0.5f;

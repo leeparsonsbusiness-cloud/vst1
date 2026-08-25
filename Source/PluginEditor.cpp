@@ -325,7 +325,8 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
       dragChordButton(p, DragMidiButton::Chords),
       dragHookButton(p, DragMidiButton::Hook),
       dragVaultButton(p, DragMidiButton::Vault),
-      vuMeter(p)
+      vuMeter(p),
+      envDisplay(p)
 {
     setLookAndFeel(&lookAndFeel);
     setSize(860, 560);
@@ -479,8 +480,66 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     layerBTypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "layer_b_type", layerBTypeBox);
 
     // ----------------------------------------------------
-    // SECTION 2: SONGWRITING & MELODY POWER (Center Bay)
+    // SECTION 2: FL STUDIO AHDSR ENVELOPE & ECHO/FAT MODE (Center Bay)
     // ----------------------------------------------------
+    addAndMakeVisible(envDisplay);
+
+    setupSlider(envDelaySlider, envDelayLabel, "DELAY");
+    envDelayAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "env_delay", envDelaySlider);
+
+    setupSlider(ampAttackSlider, ampAttackLabel, "ATT");
+    ampAttackAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_attack", ampAttackSlider);
+
+    setupSlider(envHoldSlider, envHoldLabel, "HOLD");
+    envHoldAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "env_hold", envHoldSlider);
+
+    setupSlider(ampDecaySlider, ampDecayLabel, "DEC");
+    ampDecayAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_decay", ampDecaySlider);
+
+    setupSlider(ampSustainSlider, ampSustainLabel, "SUS");
+    ampSustainAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_sustain", ampSustainSlider);
+
+    setupSlider(ampReleaseSlider, ampReleaseLabel, "REL");
+    ampReleaseAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_release", ampReleaseSlider);
+
+    setupSlider(envDecTensionSlider, envDecTensionLabel, "DEC TENS");
+    envDecTensionAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "env_dec_tension", envDecTensionSlider);
+
+    setupSlider(envRelTensionSlider, envRelTensionLabel, "REL TENS");
+    envRelTensionAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "env_rel_tension", envRelTensionSlider);
+
+    // FL Studio Echo Delay & Fat Mode
+    setupSlider(echoFeedSlider, echoFeedLabel, "FEED");
+    echoFeedAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fl_echo_feed", echoFeedSlider);
+
+    setupSlider(echoTimeSlider, echoTimeLabel, "TIME");
+    echoTimeAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fl_echo_time", echoTimeSlider);
+
+    setupSlider(echoPanSlider, echoPanLabel, "PAN");
+    echoPanAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fl_echo_pan", echoPanSlider);
+
+    setupSlider(echoPitchSlider, echoPitchLabel, "PITCH");
+    echoPitchAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fl_echo_pitch", echoPitchSlider);
+
+    setupSlider(echoCountSlider, echoCountLabel, "ECHOES");
+    echoCountAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fl_echo_count", echoCountSlider);
+
+    echoPingPongToggle.setButtonText("PING PONG");
+    addAndMakeVisible(echoPingPongToggle);
+    echoPingPongAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "fl_echo_pingpong", echoPingPongToggle);
+
+    echoFatToggle.setButtonText("FAT MODE");
+    addAndMakeVisible(echoFatToggle);
+    echoFatAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "fl_echo_fat", echoFatToggle);
+
+    // FL Studio Time Shift, Gate, Cut Self & Slide
+    setupSlider(timeShiftSlider, timeShiftLabel, "SHIFT");
+    timeShiftAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fl_time_shift", timeShiftSlider);
+
+    cutSelfToggle.setButtonText("CUT SELF");
+    addAndMakeVisible(cutSelfToggle);
+    cutSelfAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "fl_cut_self", cutSelfToggle);
+
     slideToggle.setButtonText("SLIDE / GLIDE");
     addAndMakeVisible(slideToggle);
     slideToggle.onClick = [this]() {
@@ -544,17 +603,6 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     };
     midiVaultBox.setSelectedItemIndex(0);
 
-    setupComboBox(producerFlavorBox, producerFlavorLabel, "PRODUCER FLAVOR");
-    producerFlavorBox.addItemList({"Neutral", "Zedd Crunch", "Avicii Warmth", "Max Martin Polish", "Kesha Glitter"}, 1);
-    producerFlavorAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "producer_flavor", producerFlavorBox);
-
-    setupSlider(producerFlavorIntensitySlider, producerFlavorIntensityLabel, "FLAVOR AMT");
-    producerFlavorIntensityAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "producer_flavor_intensity", producerFlavorIntensitySlider);
-
-    riserToggle.setButtonText("THE RISER / TENSION");
-    addAndMakeVisible(riserToggle);
-    riserAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "riser_active", riserToggle);
-
     // 4 Momentary Glitch Trigger Pads
     tapeStopPad = std::make_unique<MomentaryPadButton>("TAPE STOP", juce::Colour(0xffff3366), [this](bool down) {
         if (auto* param = audioProcessor.getAPVTS().getParameter("glitch_mode"))
@@ -579,18 +627,6 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
             param->setValueNotifyingHost(down ? 1.00f : 0.0f);
     });
     addAndMakeVisible(*reversePad);
-
-    setupSlider(ampAttackSlider, ampAttackLabel, "ATTACK");
-    ampAttackAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_attack", ampAttackSlider);
-
-    setupSlider(ampDecaySlider, ampDecayLabel, "DECAY");
-    ampDecayAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_decay", ampDecaySlider);
-
-    setupSlider(ampSustainSlider, ampSustainLabel, "SUSTAIN");
-    ampSustainAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_sustain", ampSustainSlider);
-
-    setupSlider(ampReleaseSlider, ampReleaseLabel, "RELEASE");
-    ampReleaseAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_release", ampReleaseSlider);
 
     setupSlider(macroDropSlider, macroDropLabel, "THE DROP");
     macroDropAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "macro_drop", macroDropSlider);
@@ -670,18 +706,20 @@ void KeshaZeddSynthAudioProcessorEditor::timerCallback()
     {
         presetBox.setSelectedItemIndex(activePreset, juce::dontSendNotification);
     }
+
+    envDisplay.repaint();
 }
 
 void KeshaZeddSynthAudioProcessorEditor::setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& text, juce::Slider::SliderStyle style)
 {
     slider.setSliderStyle(style);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 13);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 48, 12);
     slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffc5cad8));
     slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     addAndMakeVisible(slider);
 
     label.setText(text, juce::dontSendNotification);
-    label.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+    label.setFont(juce::FontOptions(8.5f, juce::Font::bold));
     label.setJustificationType(juce::Justification::centred);
     label.setColour(juce::Label::textColourId, (lookAndFeel.getTheme() == ModernSynthLookAndFeel::VintageCream) ? juce::Colour(0xff55524c) : juce::Colour(0xff8c92a6));
     addAndMakeVisible(label);
@@ -776,7 +814,7 @@ void KeshaZeddSynthAudioProcessorEditor::paint(juce::Graphics& g)
     };
 
     drawSection(16, 118, 268, 430, "Sound Engine & Hybrid", lookAndFeel.getAccentColour(0));
-    drawSection(292, 118, 276, 430, "Songwriting & Melody Power", lookAndFeel.getAccentColour(1));
+    drawSection(292, 118, 276, 430, "FL Envelope & Echo Suite", lookAndFeel.getAccentColour(1));
     drawSection(576, 118, 268, 430, "Effects & Space", lookAndFeel.getAccentColour(2));
 }
 
@@ -844,68 +882,92 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     layerBTypeBox.setBounds(26, 375, 244, 22);
 
     // ----------------------------------------------------
-    // Section 2: Songwriting & Melody Power (x: 292, y: 118, w: 276, h: 430)
+    // Section 2: FL Studio AHDSR & Echo Suite (x: 292, y: 118, w: 276, h: 430)
     // ----------------------------------------------------
-    // Row 1: Chords & Harmonize (y: 135)
-    chordProgLabel.setBounds(300, 134, 130, 13);
-    chordProgBox.setBounds(300, 147, 130, 22);
+    // FL Envelope Graph Screen (y: 136)
+    envDisplay.setBounds(300, 136, 260, 48);
 
-    harmonizerLabel.setBounds(435, 134, 125, 13);
-    harmonizerBox.setBounds(435, 147, 125, 22);
+    // Row 1 AHDSR Knobs (y: 190)
+    envDelayLabel.setBounds(300, 188, 42, 12);
+    envDelaySlider.setBounds(300, 200, 42, 44);
 
-    // Row 2: Hook Generator & Mood (y: 175)
-    hookGenToggle.setBounds(300, 175, 74, 22);
-    hookMoodBox.setBounds(376, 175, 108, 22);
-    generateHookButton.setBounds(486, 175, 74, 22);
+    ampAttackLabel.setBounds(344, 188, 42, 12);
+    ampAttackSlider.setBounds(344, 200, 42, 44);
 
-    // Row 3: Easy Key & Answer Fill (y: 204)
-    easyKeyToggle.setBounds(300, 204, 76, 22);
-    counterMelodyToggle.setBounds(380, 204, 90, 22);
-    slideToggle.setBounds(474, 204, 86, 22);
+    envHoldLabel.setBounds(388, 188, 42, 12);
+    envHoldSlider.setBounds(388, 200, 42, 44);
 
-    // Row 4: MIDI Vault & Auto-Bass (y: 232)
-    midiVaultLabel.setBounds(300, 230, 130, 13);
-    midiVaultBox.setBounds(300, 243, 130, 22);
+    ampDecayLabel.setBounds(432, 188, 42, 12);
+    ampDecaySlider.setBounds(432, 200, 42, 44);
 
-    autoBassLabel.setBounds(435, 230, 125, 13);
-    autoBassBox.setBounds(435, 243, 125, 22);
+    ampSustainLabel.setBounds(476, 188, 42, 12);
+    ampSustainSlider.setBounds(476, 200, 42, 44);
 
-    // Row 5: Momentary Performance Ribbon (y: 274)
-    if (tapeStopPad) tapeStopPad->setBounds(300, 274, 62, 22);
-    if (stutterPad)  stutterPad->setBounds(365, 274, 62, 22);
-    if (divePad)     divePad->setBounds(430, 274, 62, 22);
-    if (reversePad)  reversePad->setBounds(495, 274, 65, 22);
+    ampReleaseLabel.setBounds(518, 188, 42, 12);
+    ampReleaseSlider.setBounds(518, 200, 42, 44);
 
-    // Row 6: Envelopes (y: 304)
-    ampAttackLabel.setBounds(300, 302, 58, 13);
-    ampAttackSlider.setBounds(300, 314, 58, 46);
+    // Row 2 Tension & Echo Knobs (y: 248)
+    envDecTensionLabel.setBounds(300, 246, 50, 12);
+    envDecTensionSlider.setBounds(300, 258, 50, 44);
 
-    ampDecayLabel.setBounds(362, 302, 58, 13);
-    ampDecaySlider.setBounds(362, 314, 58, 46);
+    envRelTensionLabel.setBounds(352, 246, 50, 12);
+    envRelTensionSlider.setBounds(352, 258, 50, 44);
 
-    ampSustainLabel.setBounds(424, 302, 58, 13);
-    ampSustainSlider.setBounds(424, 314, 58, 46);
+    echoFeedLabel.setBounds(404, 246, 50, 12);
+    echoFeedSlider.setBounds(404, 258, 50, 44);
 
-    ampReleaseLabel.setBounds(486, 302, 58, 13);
-    ampReleaseSlider.setBounds(486, 314, 58, 46);
+    echoTimeLabel.setBounds(456, 246, 50, 12);
+    echoTimeSlider.setBounds(456, 258, 50, 44);
 
-    // Row 7: Macros & Scale Lock (y: 366)
-    macroDropLabel.setBounds(300, 362, 50, 13);
-    macroDropSlider.setBounds(300, 374, 50, 48);
+    echoPitchLabel.setBounds(508, 246, 50, 12);
+    echoPitchSlider.setBounds(508, 258, 50, 44);
 
-    punchLabel.setBounds(352, 362, 50, 13);
-    punchSlider.setBounds(352, 374, 50, 48);
+    // Row 3 Echo Pan, Echoes Count, Ping Pong, Fat Mode (y: 306)
+    echoPanLabel.setBounds(300, 304, 48, 12);
+    echoPanSlider.setBounds(300, 316, 48, 44);
 
-    humanizeLabel.setBounds(404, 362, 54, 13);
-    humanizeSlider.setBounds(404, 374, 54, 48);
+    echoCountLabel.setBounds(350, 304, 48, 12);
+    echoCountSlider.setBounds(350, 316, 48, 44);
 
-    scaleRootLabel.setBounds(462, 362, 40, 13);
-    scaleRootBox.setBounds(462, 374, 40, 22);
+    timeShiftLabel.setBounds(400, 304, 48, 12);
+    timeShiftSlider.setBounds(400, 316, 48, 44);
 
-    scaleTypeLabel.setBounds(504, 362, 56, 13);
-    scaleTypeBox.setBounds(504, 374, 56, 22);
+    echoPingPongToggle.setBounds(454, 306, 106, 20);
+    echoFatToggle.setBounds(454, 328, 106, 20);
 
-    riserToggle.setBounds(300, 436, 255, 22);
+    // Row 4 Momentary Performance Ribbon (y: 366)
+    if (tapeStopPad) tapeStopPad->setBounds(300, 366, 62, 22);
+    if (stutterPad)  stutterPad->setBounds(365, 366, 62, 22);
+    if (divePad)     divePad->setBounds(430, 366, 62, 22);
+    if (reversePad)  reversePad->setBounds(495, 366, 65, 22);
+
+    // Row 5 Songwriting & Function toggles (y: 394)
+    cutSelfToggle.setBounds(300, 394, 76, 20);
+    slideToggle.setBounds(380, 394, 88, 20);
+    easyKeyToggle.setBounds(472, 394, 88, 20);
+
+    // Row 6 Chords & Hook dropdowns (y: 418)
+    chordProgLabel.setBounds(300, 416, 128, 12);
+    chordProgBox.setBounds(300, 428, 128, 20);
+
+    hookGenToggle.setBounds(432, 428, 64, 20);
+    generateHookButton.setBounds(498, 428, 62, 20);
+
+    // Row 7 Macros & Scale (y: 456)
+    macroDropLabel.setBounds(300, 452, 48, 12);
+    macroDropSlider.setBounds(300, 464, 48, 44);
+
+    punchLabel.setBounds(350, 452, 48, 12);
+    punchSlider.setBounds(350, 464, 48, 44);
+
+    humanizeLabel.setBounds(400, 452, 48, 12);
+    humanizeSlider.setBounds(400, 464, 48, 44);
+
+    scaleRootLabel.setBounds(454, 452, 44, 12);
+    scaleRootBox.setBounds(454, 464, 44, 20);
+
+    scaleTypeLabel.setBounds(502, 452, 58, 12);
+    scaleTypeBox.setBounds(502, 464, 58, 20);
 
     // ----------------------------------------------------
     // Section 3: Effects & Space (x: 576, y: 118, w: 268, h: 430)
