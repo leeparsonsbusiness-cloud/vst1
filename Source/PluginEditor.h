@@ -423,7 +423,7 @@ public:
         zeddAnthemMenu.addItem(55, "Beautiful Now - Clockwork Bell Pluck");
         zeddAnthemMenu.addItem(56, "Beautiful Now - Rolling Progressive Bass");
         zeddAnthemMenu.addItem(57, "Beautiful Now - Cinematic Emotional Pad");
-        zeddAnthemMenu.addItem(58, "Beautiful Now - Radio Hybrid Piano Stab");
+        zeddAnthemMenu.addItem(58, "Beautiful Now - Emotional Breakdown Piano");
         menu.addSubMenu("09_Zedd 'Beautiful Now' Suite", zeddAnthemMenu);
         
         // User Presets

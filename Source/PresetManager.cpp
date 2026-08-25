@@ -1144,8 +1144,8 @@ PresetManager::PresetManager()
     p.trashGlossY = 0.40f;
     presets.push_back(p);
 
-    // 58. Beautiful Now - Radio Hybrid Piano Stab
-    p = createDefaultPreset("Beautiful Now - Radio Hybrid Piano Stab");
+    // 58. Beautiful Now - Emotional Breakdown Piano
+    p = createDefaultPreset("Beautiful Now - Emotional Breakdown Piano");
     p.osc1Shape = 1.0f; // Square / Pulse
     p.osc1Octave = 0;
     p.osc1Level = 0.90f;
