@@ -415,6 +415,16 @@ public:
         blowMenu.addItem(51, "Blow - Glitter Shimmer FX");
         blowMenu.addItem(52, "Blow - Heavy Sub Smasher");
         menu.addSubMenu("08_Kesha 'Blow' Studio Suite", blowMenu);
+
+        // 9. Zedd "Beautiful Now" Anthem Suite
+        juce::PopupMenu zeddAnthemMenu;
+        zeddAnthemMenu.addItem(53, "Beautiful Now - Euphoric Drop Chords");
+        zeddAnthemMenu.addItem(54, "Beautiful Now - Soaring Festival Lead");
+        zeddAnthemMenu.addItem(55, "Beautiful Now - Clockwork Bell Pluck");
+        zeddAnthemMenu.addItem(56, "Beautiful Now - Rolling Progressive Bass");
+        zeddAnthemMenu.addItem(57, "Beautiful Now - Cinematic Emotional Pad");
+        zeddAnthemMenu.addItem(58, "Beautiful Now - Radio Hybrid Piano Stab");
+        menu.addSubMenu("09_Zedd 'Beautiful Now' Suite", zeddAnthemMenu);
         
         // User Presets
         juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
@@ -462,7 +472,7 @@ public:
             {
                 menuShowing = false;
                 if (result == 0) return;
-                if (result >= 1 && result <= 52)
+                if (result >= 1 && result <= 58)
                 {
                     if (onPresetSelected)
                         onPresetSelected(result - 1);

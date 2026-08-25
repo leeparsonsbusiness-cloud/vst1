@@ -1017,6 +1017,155 @@ PresetManager::PresetManager()
     p.ampRelease = 0.10f;
     presets.push_back(p);
 
+    // 53. Beautiful Now - Euphoric Drop Chords
+    p = createDefaultPreset("Beautiful Now - Euphoric Drop Chords");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 7; // Max Supersaw
+    p.unisonDetune = 38.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.70f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 14000.0f;
+    p.filterRes = 0.12f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.45f;
+    p.ampSustain = 0.92f;
+    p.ampRelease = 0.35f;
+    p.pumpActive = 1; // 1/4 note pumping
+    p.pumpDepth = 0.75f;
+    p.pumpDivision = 0;
+    p.trashGlossY = 0.60f; // High gloss polish
+    p.fxChorusMix = 0.45f;
+    p.fxDelayMix = 0.20f;
+    p.fxReverbMix = 0.35f;
+    presets.push_back(p);
+
+    // 54. Beautiful Now - Soaring Festival Lead
+    p = createDefaultPreset("Beautiful Now - Soaring Festival Lead");
+    p.osc1Shape = 2.0f;
+    p.osc1Octave = 1;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 5;
+    p.unisonDetune = 22.0f;
+    p.osc2Shape = 1.0f; // Square Sync
+    p.osc2Octave = 0;
+    p.osc2Level = 0.65f;
+    p.oscSync = 1;
+    p.playMode = 1; // Mono Legato
+    p.glideTime = 60.0f;
+    p.filterMode = 0;
+    p.filterCutoff = 16000.0f;
+    p.ampAttack = 0.001f;
+    p.ampRelease = 0.35f;
+    p.fxDelayTime = 375.0f; // 1/8d delay
+    p.fxDelayMix = 0.35f;
+    p.fxReverbDecay = 0.75f;
+    p.fxReverbMix = 0.30f;
+    p.trashGlossY = 0.50f;
+    presets.push_back(p);
+
+    // 55. Beautiful Now - Clockwork Bell Pluck
+    p = createDefaultPreset("Beautiful Now - Clockwork Bell Pluck");
+    p.osc1Shape = 1.0f; // Square
+    p.osc1Octave = 0;
+    p.osc1Level = 0.85f;
+    p.unisonCount = 3;
+    p.unisonDetune = 12.0f;
+    p.osc2Shape = 0.0f; // Sine
+    p.osc2Octave = 1;
+    p.osc2Level = 0.60f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 2800.0f;
+    p.filterRes = 0.30f;
+    p.filterEnvAmt = 0.65f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.15f;
+    p.filterSustain = 0.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.22f;
+    p.ampSustain = 0.0f;
+    p.ampRelease = 0.12f;
+    p.fxDelayTime = 234.0f; // 1/8 note sync
+    p.fxDelayMix = 0.35f;
+    p.fxReverbMix = 0.25f;
+    presets.push_back(p);
+
+    // 56. Beautiful Now - Rolling Progressive Bass
+    p = createDefaultPreset("Beautiful Now - Rolling Progressive Bass");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = -1;
+    p.osc1Level = 0.95f;
+    p.osc2Shape = 1.0f; // Square
+    p.osc2Octave = -2;
+    p.osc2Level = 0.70f;
+    p.subWave = 0; // Sine Sub
+    p.subOctave = -2;
+    p.subLevel = 0.90f;
+    p.subDrive = 0.40f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 1800.0f;
+    p.filterRes = 0.30f;
+    p.filterDrive = 2.5f;
+    p.filterEnvAmt = 0.50f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.18f;
+    p.filterSustain = 0.30f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.25f;
+    p.ampSustain = 0.80f;
+    p.ampRelease = 0.15f;
+    p.monoMakerActive = 1;
+    p.monoMakerFreq = 160.0f;
+    presets.push_back(p);
+
+    // 57. Beautiful Now - Cinematic Emotional Pad
+    p = createDefaultPreset("Beautiful Now - Cinematic Emotional Pad");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.90f;
+    p.unisonCount = 7;
+    p.unisonDetune = 30.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = 1;
+    p.osc2Level = 0.50f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 3500.0f;
+    p.filterRes = 0.10f;
+    p.ampAttack = 0.65f; // Soft swell
+    p.ampDecay = 1.50f;
+    p.ampSustain = 0.95f;
+    p.ampRelease = 1.80f;
+    p.fxChorusMix = 0.60f;
+    p.fxReverbDecay = 0.90f;
+    p.fxReverbMix = 0.55f;
+    p.trashGlossY = 0.40f;
+    presets.push_back(p);
+
+    // 58. Beautiful Now - Radio Hybrid Piano Stab
+    p = createDefaultPreset("Beautiful Now - Radio Hybrid Piano Stab");
+    p.osc1Shape = 1.0f; // Square / Pulse
+    p.osc1Octave = 0;
+    p.osc1Level = 0.90f;
+    p.unisonCount = 3;
+    p.unisonDetune = 10.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.50f;
+    p.filterMode = 0;
+    p.filterCutoff = 8000.0f;
+    p.filterRes = 0.15f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.60f;
+    p.ampSustain = 0.40f;
+    p.ampRelease = 0.30f;
+    p.trashGlossY = 0.55f;
+    p.fxChorusMix = 0.35f;
+    p.fxReverbMix = 0.30f;
+    presets.push_back(p);
+
     // Populate name array
     for (const auto& preset : presets)
         presetNames.push_back(preset.name);
