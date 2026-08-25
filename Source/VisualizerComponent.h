@@ -16,7 +16,7 @@ public:
     {
         std::fill(fftData.begin(), fftData.end(), 0.0f);
         std::fill(scopeData.begin(), scopeData.end(), 0.0f);
-        startTimerHz(30); // 30 FPS repaint
+        startTimerHz(30);
     }
 
     ~VisualizerComponent() override
@@ -85,15 +85,22 @@ public:
     void paint(juce::Graphics& g) override
     {
         auto bounds = getLocalBounds().toFloat();
-        g.fillAll(juce::Colour(0xff0c0d12));
-
-        g.setColour(juce::Colour(0xff232533));
-        g.drawRoundedRectangle(bounds, 6.0f, 1.5f);
+        
+        // 1. OLED Screen Background (Deep Black-Blue)
+        g.setColour(juce::Colour(0xff090a0e));
+        g.fillRoundedRectangle(bounds, 5.0f);
 
         float w = bounds.getWidth();
         float h = bounds.getHeight();
 
-        // 1. Draw Spectrum Analyzer Path
+        // 2. Subtle CRT Gridlines
+        g.setColour(juce::Colour(0xff161922));
+        for (float gx = 40.0f; gx < w; gx += 50.0f)
+            g.drawVerticalLine(static_cast<int>(gx), 2.0f, h - 2.0f);
+        for (float gy = 15.0f; gy < h; gy += 20.0f)
+            g.drawHorizontalLine(static_cast<int>(gy), 2.0f, w - 2.0f);
+
+        // 3. Draw Spectrum Analyzer (Analog Lab Amber & Cyan Glow)
         juce::Path spectrumPath;
         spectrumPath.startNewSubPath(0.0f, h);
 
@@ -102,7 +109,7 @@ public:
         {
             float binNorm = static_cast<float>(i) / static_cast<float>(numBins);
             float logX = std::pow(binNorm, 0.45f) * w;
-            float binH = spectrumLevels[static_cast<size_t>(i)] * (h - 10.0f);
+            float binH = spectrumLevels[static_cast<size_t>(i)] * (h - 8.0f);
             float y = h - binH;
 
             if (i == 0)
@@ -114,12 +121,12 @@ public:
         spectrumPath.lineTo(0.0f, h);
         spectrumPath.closeSubPath();
 
-        juce::ColourGradient specGrad(juce::Colour(0xbb00f2fe), 0.0f, h,
-                                       juce::Colour(0xbbff2a85), w, 0.0f, false);
+        juce::ColourGradient specGrad(juce::Colour(0x9900d4ff), 0.0f, h,
+                                       juce::Colour(0x99ffaa00), w, 0.0f, false);
         g.setGradientFill(specGrad);
         g.fillPath(spectrumPath);
 
-        // 2. Draw Live Oscilloscope Waveform Line
+        // 4. Draw Oscilloscope Waveform Trace
         juce::Path scopePath;
         float scopeStep = w / static_cast<float>(scopeSize);
 
@@ -127,7 +134,7 @@ public:
         {
             float x = i * scopeStep;
             float sample = scopeData[static_cast<size_t>(i)];
-            float y = h * 0.5f - sample * (h * 0.4f);
+            float y = h * 0.5f - sample * (h * 0.42f);
 
             if (i == 0)
                 scopePath.startNewSubPath(x, y);
@@ -135,17 +142,17 @@ public:
                 scopePath.lineTo(x, y);
         }
 
-        g.setColour(juce::Colour(0xffffffff).withAlpha(0.6f));
+        g.setColour(juce::Colour(0xff00d4ff).withAlpha(0.85f));
         g.strokePath(scopePath, juce::PathStrokeType(1.2f));
 
-        // 3. Draw Filter Cutoff Curve Handle
+        // 5. Filter Cutoff Cursor
         float cutoffNorm = (std::log10(std::max(20.0f, filterCutoff)) - std::log10(20.0f)) / (std::log10(20000.0f) - std::log10(20.0f));
         float cutoffX = juce::jlimit(0.0f, 1.0f, cutoffNorm) * w;
-        float resH = (filterRes * 0.3f) * h;
+        float resH = (filterRes * 0.35f) * h;
 
-        g.setColour(juce::Colour(0xffff0055));
-        g.drawVerticalLine(static_cast<int>(cutoffX), 5.0f, h - 5.0f);
-        g.fillEllipse(cutoffX - 4.0f, h * 0.5f - resH - 4.0f, 8.0f, 8.0f);
+        g.setColour(juce::Colour(0xffffaa00));
+        g.drawVerticalLine(static_cast<int>(cutoffX), 4.0f, h - 4.0f);
+        g.fillEllipse(cutoffX - 3.5f, h * 0.5f - resH - 3.5f, 7.0f, 7.0f);
     }
 
 private:

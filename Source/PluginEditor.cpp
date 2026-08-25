@@ -1,63 +1,93 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-// Modern Dark-Mode Custom LookAndFeel Implementation
+// ==============================================================================
+// Analog Lab Inspired LookAndFeel Implementation
+// ==============================================================================
 ModernSynthLookAndFeel::ModernSynthLookAndFeel()
 {
-    setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(0xff12131a));
-    setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff1e212d));
-    setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff00f2fe).withAlpha(0.5f));
-    setColour(juce::ComboBox::focusedOutlineColourId, juce::Colour(0xff00f2fe));
-    setColour(juce::ComboBox::textColourId, juce::Colours::white);
-    setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff181a24));
-    setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xff00f2fe).withAlpha(0.3f));
+    setColour(juce::ResizableWindow::backgroundColourId, juce::Colour(0xff121318));
+    setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff1c1e26));
+    setColour(juce::ComboBox::outlineColourId, juce::Colour(0xff353948));
+    setColour(juce::ComboBox::focusedOutlineColourId, juce::Colour(0xff00d4ff));
+    setColour(juce::ComboBox::textColourId, juce::Colour(0xffe0e4f0));
+    setColour(juce::PopupMenu::backgroundColourId, juce::Colour(0xff171820));
+    setColour(juce::PopupMenu::highlightedBackgroundColourId, juce::Colour(0xff00d4ff).withAlpha(0.25f));
     setColour(juce::PopupMenu::highlightedTextColourId, juce::Colours::white);
-    setColour(juce::PopupMenu::textColourId, juce::Colour(0xffc5cad6));
+    setColour(juce::PopupMenu::textColourId, juce::Colour(0xffc5cad8));
 }
 
 void ModernSynthLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                                               float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
                                               juce::Slider& slider)
 {
-    auto radius = (float) juce::jmin(width / 2, height / 2) - 6.0f;
-    auto centreX = (float) x + (float) width * 0.5f;
-    auto centreY = (float) y + (float) height * 0.5f;
+    auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat();
+    auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) * 0.5f - 7.0f;
+    auto centreX = bounds.getCentreX();
+    auto centreY = bounds.getCentreY();
     auto rx = centreX - radius;
     auto ry = centreY - radius;
     auto rw = radius * 2.0f;
     auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-    // Background track arc
+    // 1. Soft Drop Shadow
+    g.setColour(juce::Colour(0x66000000));
+    g.fillEllipse(rx + 1.0f, ry + 3.0f, rw, rw);
+
+    // 2. Outer Background Track Ring (Analog Lab Dark Inset)
     juce::Path backgroundArc;
     backgroundArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, rotaryEndAngle, true);
-    g.setColour(juce::Colour(0xff252936));
+    g.setColour(juce::Colour(0xff1f222c));
     g.strokePath(backgroundArc, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
-    // Active cyan/magenta gradient track arc
+    // 3. Illuminated LED Value Arc
     if (slider.isEnabled())
     {
         juce::Path valueArc;
         valueArc.addCentredArc(centreX, centreY, radius, radius, 0.0f, rotaryStartAngle, angle, true);
-        juce::ColourGradient grad(juce::Colour(0xff00f2fe), centreX - radius, centreY,
-                                  juce::Colour(0xffff2a85), centreX + radius, centreY, false);
+        
+        // Choose glowing theme color (Cyan to Amber gradient)
+        juce::ColourGradient grad(juce::Colour(0xff00d4ff), centreX - radius, centreY,
+                                  juce::Colour(0xffffaa00), centreX + radius, centreY, false);
         g.setGradientFill(grad);
         g.strokePath(valueArc, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
-    // Inner dial metallic body
-    g.setColour(juce::Colour(0xff1a1c26));
-    g.fillEllipse(rx + 4.0f, ry + 4.0f, rw - 8.0f, rw - 8.0f);
-    g.setColour(juce::Colour(0xff2a2e3d));
-    g.drawEllipse(rx + 4.0f, ry + 4.0f, rw - 8.0f, rw - 8.0f, 1.5f);
+    // 4. Outer Dial Body (Brushed Gunmetal Cap)
+    auto dialRadius = radius - 5.0f;
+    auto drx = centreX - dialRadius;
+    auto dry = centreY - dialRadius;
+    auto drw = dialRadius * 2.0f;
 
-    // Dial indicator line
+    // Bevel outer ring
+    g.setColour(juce::Colour(0xff2d313f));
+    g.fillEllipse(drx, dry, drw, drw);
+
+    // Metallic Gradient Face
+    juce::ColourGradient faceGrad(juce::Colour(0xff282b36), centreX - dialRadius, centreY - dialRadius,
+                                  juce::Colour(0xff15161d), centreX + dialRadius, centreY + dialRadius, false);
+    g.setGradientFill(faceGrad);
+    g.fillEllipse(drx + 1.5f, dry + 1.5f, drw - 3.0f, drw - 3.0f);
+
+    // Subtle inner bevel
+    g.setColour(juce::Colour(0xff3f4455).withAlpha(0.6f));
+    g.drawEllipse(drx + 1.5f, dry + 1.5f, drw - 3.0f, drw - 3.0f, 1.0f);
+
+    // 5. Dial Pointer Line & Center Dot
     juce::Path p;
-    auto pointerLength = radius * 0.55f;
-    auto pointerThickness = 3.0f;
-    p.addRectangle(-pointerThickness * 0.5f, -radius + 6.0f, pointerThickness, pointerLength);
+    auto pointerLength = dialRadius * 0.70f;
+    auto pointerThickness = 2.5f;
+    p.addRoundedRectangle(-pointerThickness * 0.5f, -dialRadius + 2.0f, pointerThickness, pointerLength, 1.0f);
     p.applyTransform(juce::AffineTransform::rotation(angle).translated(centreX, centreY));
-    g.setColour(juce::Colour(0xff00f2fe));
+    
+    g.setColour(juce::Colour(0xffffffff));
     g.fillPath(p);
+
+    // Center metallic cap dot
+    g.setColour(juce::Colour(0xff121318));
+    g.fillEllipse(centreX - 3.0f, centreY - 3.0f, 6.0f, 6.0f);
+    g.setColour(juce::Colour(0xff00d4ff));
+    g.fillEllipse(centreX - 1.5f, centreY - 1.5f, 3.0f, 3.0f);
 }
 
 void ModernSynthLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
@@ -70,20 +100,23 @@ void ModernSynthLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, i
         auto trackX = (float) x + ((float) width - trackWidth) * 0.5f;
 
         // Background track
-        g.setColour(juce::Colour(0xff252936));
+        g.setColour(juce::Colour(0xff1e212b));
         g.fillRoundedRectangle(trackX, (float) y, trackWidth, (float) height, 2.0f);
 
         // Filled track
         auto fillHeight = maxSliderPos - sliderPos;
-        g.setColour(juce::Colour(0xff00f2fe));
+        g.setColour(juce::Colour(0xff00d4ff));
         g.fillRoundedRectangle(trackX, sliderPos, trackWidth, fillHeight, 2.0f);
 
-        // Glowing thumb cap
-        auto thumbWidth = 14.0f;
+        // Thumb cap
+        auto thumbWidth = 16.0f;
         auto thumbHeight = 10.0f;
         auto thumbX = (float) x + ((float) width - thumbWidth) * 0.5f;
-        g.setColour(juce::Colour(0xffff2a85));
-        g.fillRoundedRectangle(thumbX, sliderPos - thumbHeight * 0.5f, thumbWidth, thumbHeight, 3.0f);
+        
+        g.setColour(juce::Colour(0xff2d3140));
+        g.fillRoundedRectangle(thumbX, sliderPos - thumbHeight * 0.5f, thumbWidth, thumbHeight, 2.5f);
+        g.setColour(juce::Colour(0xffffaa00));
+        g.drawRoundedRectangle(thumbX, sliderPos - thumbHeight * 0.5f, thumbWidth, thumbHeight, 2.5f, 1.0f);
     }
     else
     {
@@ -95,29 +128,93 @@ void ModernSynthLookAndFeel::drawComboBox(juce::Graphics& g, int width, int heig
                                           int buttonX, int buttonY, int buttonW, int buttonH,
                                           juce::ComboBox& box)
 {
-    g.setColour(juce::Colour(0xff1e212d));
-    g.fillRoundedRectangle(0.0f, 0.0f, (float) width, (float) height, 6.0f);
+    auto bounds = juce::Rectangle<float>(0.0f, 0.0f, (float) width, (float) height);
+    
+    // Background pill
+    g.setColour(juce::Colour(0xff1a1c24));
+    g.fillRoundedRectangle(bounds, 4.0f);
 
-    g.setColour(juce::Colour(0xff00f2fe).withAlpha(box.hasKeyboardFocus(true) ? 0.8f : 0.4f));
-    g.drawRoundedRectangle(0.0f, 0.0f, (float) width, (float) height, 6.0f, 1.2f);
+    // Border
+    g.setColour(box.hasKeyboardFocus(true) ? juce::Colour(0xff00d4ff) : juce::Colour(0xff2f3344));
+    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
 
-    // Arrow indicator
+    // Chevron Arrow indicator
     juce::Path path;
-    path.addTriangle((float) buttonX + (float) buttonW * 0.3f, (float) buttonY + (float) buttonH * 0.4f,
-                     (float) buttonX + (float) buttonW * 0.7f, (float) buttonY + (float) buttonH * 0.4f,
-                     (float) buttonX + (float) buttonW * 0.5f, (float) buttonY + (float) buttonH * 0.7f);
-    g.setColour(juce::Colour(0xff00f2fe));
-    g.fillPath(path);
+    float ax = (float) buttonX + (float) buttonW * 0.5f;
+    float ay = (float) buttonY + (float) buttonH * 0.5f;
+    path.startNewSubPath(ax - 3.5f, ay - 2.0f);
+    path.lineTo(ax, ay + 2.5f);
+    path.lineTo(ax + 3.5f, ay - 2.0f);
+
+    g.setColour(juce::Colour(0xff8c92a6));
+    g.strokePath(path, juce::PathStrokeType(1.5f));
 }
 
-// Plugin Editor Constructor
+void ModernSynthLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
+                                              bool shouldDrawButtonAsHighlighted, bool /*shouldDrawButtonAsDown*/)
+{
+    auto bounds = button.getLocalBounds().toFloat().reduced(2.0f);
+    bool isOn = button.getToggleState();
+
+    // Button body
+    g.setColour(isOn ? juce::Colour(0xff222836) : (shouldDrawButtonAsHighlighted ? juce::Colour(0xff1e212b) : juce::Colour(0xff181a22)));
+    g.fillRoundedRectangle(bounds, 4.0f);
+
+    g.setColour(isOn ? juce::Colour(0xff00d4ff) : juce::Colour(0xff2d3142));
+    g.drawRoundedRectangle(bounds, 4.0f, isOn ? 1.5f : 1.0f);
+
+    // Glowing LED dot indicator
+    float ledX = bounds.getX() + 10.0f;
+    float ledY = bounds.getCentreY();
+    
+    if (isOn)
+    {
+        g.setColour(juce::Colour(0x5500d4ff));
+        g.fillEllipse(ledX - 5.0f, ledY - 5.0f, 10.0f, 10.0f);
+        g.setColour(juce::Colour(0xff00d4ff));
+        g.fillEllipse(ledX - 3.0f, ledY - 3.0f, 6.0f, 6.0f);
+    }
+    else
+    {
+        g.setColour(juce::Colour(0xff33384a));
+        g.fillEllipse(ledX - 3.0f, ledY - 3.0f, 6.0f, 6.0f);
+    }
+
+    // Button text
+    g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+    g.setColour(isOn ? juce::Colour(0xffffffff) : juce::Colour(0xff8e94a8));
+    g.drawText(button.getButtonText(), bounds.withTrimmedLeft(20.0f), juce::Justification::centredLeft, true);
+}
+
+void ModernSynthLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
+                                                  const juce::Colour& backgroundColour,
+                                                  bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown)
+{
+    auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
+    
+    juce::Colour base = backgroundColour;
+    if (shouldDrawButtonAsDown)
+        base = base.darker(0.2f);
+    else if (shouldDrawButtonAsHighlighted)
+        base = base.brighter(0.15f);
+
+    g.setColour(base);
+    g.fillRoundedRectangle(bounds, 4.0f);
+
+    g.setColour(shouldDrawButtonAsHighlighted ? juce::Colour(0xff00d4ff) : juce::Colour(0xff323648));
+    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
+}
+
+// ==============================================================================
+// Plugin Editor Constructor & Setup
+// ==============================================================================
 KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZeddSynthAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p), dragMidiButton(p), vuMeter(p)
 {
     setLookAndFeel(&lookAndFeel);
-    setSize(960, 860);
+    setSize(1040, 920);
 
-    // Header Controls
+    // Header Preset Browser
     setupComboBox(presetBox, presetLabel, "PRESET");
     auto& presetNames = audioProcessor.getPresetManager().getPresetNames();
     for (size_t i = 0; i < presetNames.size(); ++i)
@@ -155,62 +252,71 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
         presetBox.onPresetSelected(nextIdx);
     };
 
-    // Zeddify & Auto-Master Controls
+    // Zeddify & Auto-Master Workflow Buttons
     zeddifyButton.setButtonText("ZEDDIFY");
-    zeddifyButton.setColour(juce::ToggleButton::textColourId, juce::Colour(0xff00f2fe));
-    zeddifyButton.setColour(juce::ToggleButton::tickColourId, juce::Colour(0xff00f2fe));
     addAndMakeVisible(zeddifyButton);
     zeddifyAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "zeddify_active", zeddifyButton);
 
     addAndMakeVisible(dragMidiButton);
 
     autoMasterButton.setButtonText("AUTO-MASTER");
-    autoMasterButton.setColour(juce::ToggleButton::textColourId, juce::Colour(0xffff2a85));
-    autoMasterButton.setColour(juce::ToggleButton::tickColourId, juce::Colour(0xffff2a85));
     addAndMakeVisible(autoMasterButton);
     autoMasterAttachment = std::make_unique<ButtonAttachment>(audioProcessor.getAPVTS(), "auto_master_active", autoMasterButton);
 
-    setupSlider(autoMasterIntensitySlider, autoMasterIntensityLabel, "PWR");
+    setupSlider(autoMasterIntensitySlider, autoMasterIntensityLabel, "INTENSITY");
     autoMasterIntensityAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "auto_master_intensity", autoMasterIntensitySlider);
 
     addAndMakeVisible(vuMeter);
     addAndMakeVisible(audioProcessor.getVisualizer());
 
-    setupSlider(masterVolSlider, masterVolLabel, "MASTER");
+    setupSlider(masterVolSlider, masterVolLabel, "VOLUME");
     masterVolAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "master_vol", masterVolSlider);
 
-    // Save, Load & Dice Buttons
+    // Save, Load, Dice
     savePresetButton.setButtonText("SAVE");
-    savePresetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff181a24));
-    savePresetButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    savePresetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1f222e));
     addAndMakeVisible(savePresetButton);
     savePresetButton.onClick = [this]() { showSavePresetDialog(); };
 
     loadPresetButton.setButtonText("LOAD");
-    loadPresetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff181a24));
-    loadPresetButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+    loadPresetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1f222e));
     addAndMakeVisible(loadPresetButton);
-    loadPresetButton.onClick = [this]() { presetBox.showPopup(); };
+    loadPresetButton.onClick = [this]() {
+        auto chooser = std::make_shared<juce::FileChooser>("Load User Preset JSON...",
+                                  juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("KeshaAndZeddSynth").getChildFile("UserPresets"),
+                                  "*.json");
+        chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+            [this, chooser](const juce::FileChooser& fc)
+            {
+                auto file = fc.getResult();
+                if (file.existsAsFile())
+                {
+                    audioProcessor.getPresetManager().loadUserPreset(file);
+                    presetBox.setText(file.getFileNameWithoutExtension(), juce::dontSendNotification);
+                }
+            });
+    };
 
-    diceButton.setButtonText("🎲 DICE");
-    diceButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff181a24));
-    diceButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xff00f2fe));
+    diceButton.setButtonText("RANDOM");
+    diceButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2d2238));
     addAndMakeVisible(diceButton);
-    diceButton.onClick = [this]() { audioProcessor.randomizeParameters(); };
+    diceButton.onClick = [this]() {
+        audioProcessor.randomizeParameters();
+        presetBox.setText("Custom Random", juce::dontSendNotification);
+    };
 
-    voiceCountLabel.setText("VOICES: 0 / 8", juce::dontSendNotification);
-    voiceCountLabel.setFont(juce::FontOptions(13.0f, juce::Font::bold));
-    voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(0xff00f2fe));
-    voiceCountLabel.setJustificationType(juce::Justification::centredRight);
+    voiceCountLabel.setText("8 VOICES", juce::dontSendNotification);
+    voiceCountLabel.setFont(juce::FontOptions(10.0f, juce::Font::bold));
+    voiceCountLabel.setColour(juce::Label::textColourId, juce::Colour(0xff757a8e));
     addAndMakeVisible(voiceCountLabel);
 
     // ----------------------------------------------------
-    // Section 1: Oscillators & Unison Controls
+    // Section 1: Oscillators & Unison
     // ----------------------------------------------------
     setupSlider(osc1ShapeSlider, osc1ShapeLabel, "OSC 1 SHAPE");
     osc1ShapeAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "osc1_shape", osc1ShapeSlider);
 
-    setupComboBox(osc1OctaveBox, osc1OctaveLabel, "OCTAVE");
+    setupComboBox(osc1OctaveBox, osc1OctaveLabel, "OCT");
     osc1OctaveBox.addItemList({"-2", "-1", "0", "+1", "+2"}, 1);
     osc1OctaveAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "osc1_octave", osc1OctaveBox);
 
@@ -221,16 +327,17 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     osc1LevelAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "osc1_level", osc1LevelSlider);
 
     setupComboBox(unisonCountBox, unisonCountLabel, "UNISON");
-    unisonCountBox.addItemList({"1 Voice", "3 Voices", "5 Voices", "7 Voices"}, 1);
+    unisonCountBox.addItemList({"1 Voice", "2 Voices", "3 Voices", "4 Voices", "5 Voices", "6 Voices", "7 Voices"}, 1);
     unisonCountAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "unison_count", unisonCountBox);
 
     setupSlider(unisonDetuneSlider, unisonDetuneLabel, "SPREAD");
     unisonDetuneAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "unison_detune", unisonDetuneSlider);
 
+    // Section 2: Oscillator 2 & Mod
     setupSlider(osc2ShapeSlider, osc2ShapeLabel, "OSC 2 SHAPE");
     osc2ShapeAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "osc2_shape", osc2ShapeSlider);
 
-    setupComboBox(osc2OctaveBox, osc2OctaveLabel, "OCTAVE");
+    setupComboBox(osc2OctaveBox, osc2OctaveLabel, "OCT");
     osc2OctaveBox.addItemList({"-2", "-1", "0", "+1", "+2"}, 1);
     osc2OctaveAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "osc2_octave", osc2OctaveBox);
 
@@ -248,10 +355,10 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     oscSyncAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "osc_sync", oscSyncBox);
 
     // ----------------------------------------------------
-    // Section 2: Filter Controls
+    // Section 2: Dynamic Filter & Envelope
     // ----------------------------------------------------
-    setupComboBox(filterModeBox, filterModeLabel, "FILTER MODE");
-    filterModeBox.addItemList({"LPF 12", "LPF 24", "BPF 12", "HPF 12", "Notch", "Vowel Formant"}, 1);
+    setupComboBox(filterModeBox, filterModeLabel, "FILTER TYPE");
+    filterModeBox.addItemList({"LPF 12dB", "LPF 24dB", "BPF 12dB", "HPF 12dB", "Notch", "Vowel Formant"}, 1);
     filterModeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "filter_mode", filterModeBox);
 
     setupSlider(filterCutoffSlider, filterCutoffLabel, "CUTOFF");
@@ -275,118 +382,113 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     setupSlider(formantMorphSlider, formantMorphLabel, "VOWEL");
     formantMorphAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "formant_morph", formantMorphSlider);
 
-    // Filter ADSR & Curve
-    setupSlider(filterAttackSlider, filterAttackLabel, "F-ATT", juce::Slider::LinearVertical);
+    // Filter Envelope ADSR
+    setupSlider(filterAttackSlider, filterAttackLabel, "F-ATT");
     filterAttackAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "filter_attack", filterAttackSlider);
 
-    setupSlider(filterDecaySlider, filterDecayLabel, "F-DEC", juce::Slider::LinearVertical);
+    setupSlider(filterDecaySlider, filterDecayLabel, "F-DEC");
     filterDecayAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "filter_decay", filterDecaySlider);
 
-    setupSlider(filterSustainSlider, filterSustainLabel, "F-SUS", juce::Slider::LinearVertical);
+    setupSlider(filterSustainSlider, filterSustainLabel, "F-SUS");
     filterSustainAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "filter_sustain", filterSustainSlider);
 
-    setupSlider(filterReleaseSlider, filterReleaseLabel, "F-REL", juce::Slider::LinearVertical);
+    setupSlider(filterReleaseSlider, filterReleaseLabel, "F-REL");
     filterReleaseAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "filter_release", filterReleaseSlider);
 
     setupSlider(filterCurveSlider, filterCurveLabel, "F-CURVE");
     filterCurveAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "filter_decay_curve", filterCurveSlider);
 
     // ----------------------------------------------------
-    // Section 3: Amp ADSR & Curves
+    // Section 3: Amp Envelope & Dual Synced LFOs
     // ----------------------------------------------------
-    setupSlider(ampAttackSlider, ampAttackLabel, "ATTACK", juce::Slider::LinearVertical);
+    setupSlider(ampAttackSlider, ampAttackLabel, "ATTACK");
     ampAttackAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_attack", ampAttackSlider);
 
-    setupSlider(ampDecaySlider, ampDecayLabel, "DECAY", juce::Slider::LinearVertical);
+    setupSlider(ampDecaySlider, ampDecayLabel, "DECAY");
     ampDecayAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_decay", ampDecaySlider);
 
-    setupSlider(ampSustainSlider, ampSustainLabel, "SUSTAIN", juce::Slider::LinearVertical);
+    setupSlider(ampSustainSlider, ampSustainLabel, "SUSTAIN");
     ampSustainAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_sustain", ampSustainSlider);
 
-    setupSlider(ampReleaseSlider, ampReleaseLabel, "RELEASE", juce::Slider::LinearVertical);
+    setupSlider(ampReleaseSlider, ampReleaseLabel, "RELEASE");
     ampReleaseAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_release", ampReleaseSlider);
 
-    setupSlider(ampCurveSlider, ampCurveLabel, "DECAY CURVE");
+    setupSlider(ampCurveSlider, ampCurveLabel, "A-CURVE");
     ampCurveAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "amp_decay_curve", ampCurveSlider);
 
-    // Modulation Bay LFOs Setup
-    setupComboBox(lfo1WaveBox, lfo1WaveLabel, "LFO 1 WAVE");
-    lfo1WaveBox.addItemList({"Sine", "Triangle", "Saw", "Square", "Random"}, 1);
+    // LFO 1
+    setupComboBox(lfo1WaveBox, lfo1WaveLabel, "LFO 1 SHAPE");
+    lfo1WaveBox.addItemList({"Sine", "Triangle", "Saw", "Square", "Random S&H"}, 1);
     lfo1WaveAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "lfo1_wave", lfo1WaveBox);
 
     setupComboBox(lfo1RateBox, lfo1RateLabel, "LFO 1 RATE");
     lfo1RateBox.addItemList({"1/1", "1/2", "1/4", "1/8", "1/16", "1/32", "1/4T", "1/8T", "1/16T", "1/4D", "1/8D", "1/16D"}, 1);
     lfo1RateAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "lfo1_rate", lfo1RateBox);
 
-    setupSlider(lfo1ToCutoffSlider, lfo1ToCutoffLabel, "LFO1->CUTOFF");
+    setupSlider(lfo1ToCutoffSlider, lfo1ToCutoffLabel, "LFO1 > CUT");
     lfo1ToCutoffAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "lfo1_to_cutoff", lfo1ToCutoffSlider);
 
-    setupSlider(lfo1ToShapeSlider, lfo1ToShapeLabel, "LFO1->SHAPE");
+    setupSlider(lfo1ToShapeSlider, lfo1ToShapeLabel, "LFO1 > SHP");
     lfo1ToShapeAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "lfo1_to_shape", lfo1ToShapeSlider);
 
-    setupComboBox(lfo2WaveBox, lfo2WaveLabel, "LFO 2 WAVE");
-    lfo2WaveBox.addItemList({"Sine", "Triangle", "Saw", "Square", "Random"}, 1);
+    // LFO 2
+    setupComboBox(lfo2WaveBox, lfo2WaveLabel, "LFO 2 SHAPE");
+    lfo2WaveBox.addItemList({"Sine", "Triangle", "Saw", "Square", "Random S&H"}, 1);
     lfo2WaveAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "lfo2_wave", lfo2WaveBox);
 
     setupComboBox(lfo2RateBox, lfo2RateLabel, "LFO 2 RATE");
     lfo2RateBox.addItemList({"1/1", "1/2", "1/4", "1/8", "1/16", "1/32", "1/4T", "1/8T", "1/16T", "1/4D", "1/8D", "1/16D"}, 1);
     lfo2RateAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "lfo2_rate", lfo2RateBox);
 
-    setupSlider(lfo2ToPitchSlider, lfo2ToPitchLabel, "LFO2->PITCH");
+    setupSlider(lfo2ToPitchSlider, lfo2ToPitchLabel, "LFO2 > PITCH");
     lfo2ToPitchAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "lfo2_to_pitch", lfo2ToPitchSlider);
 
-    setupSlider(lfo2ToPanSlider, lfo2ToPanLabel, "LFO2->PAN");
+    setupSlider(lfo2ToPanSlider, lfo2ToPanLabel, "LFO2 > PAN");
     lfo2ToPanAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "lfo2_to_pan", lfo2ToPanSlider);
 
     // ----------------------------------------------------
-    // Section 4: Post FX Controls
+    // Section 4: Post FX Chain
     // ----------------------------------------------------
     setupSlider(fxDriveSlider, fxDriveLabel, "DRIVE");
     fxDriveAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_drive", fxDriveSlider);
 
-    setupSlider(fxChorusRateSlider, fxChorusRateLabel, "C-RATE");
+    setupSlider(fxChorusRateSlider, fxChorusRateLabel, "CHORUS RATE");
     fxChorusRateAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_chorus_rate", fxChorusRateSlider);
 
-    setupSlider(fxChorusDepthSlider, fxChorusDepthLabel, "C-DEPTH");
+    setupSlider(fxChorusDepthSlider, fxChorusDepthLabel, "CHORUS DEPTH");
     fxChorusDepthAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_chorus_depth", fxChorusDepthSlider);
 
-    setupSlider(fxChorusMixSlider, fxChorusMixLabel, "C-MIX");
+    setupSlider(fxChorusMixSlider, fxChorusMixLabel, "CHORUS MIX");
     fxChorusMixAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_chorus_mix", fxChorusMixSlider);
 
-    setupSlider(fxDelayTimeSlider, fxDelayTimeLabel, "D-TIME");
+    setupSlider(fxDelayTimeSlider, fxDelayTimeLabel, "DELAY TIME");
     fxDelayTimeAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_delay_time", fxDelayTimeSlider);
 
-    setupSlider(fxDelayFeedbackSlider, fxDelayFeedbackLabel, "D-FEEDBACK");
+    setupSlider(fxDelayFeedbackSlider, fxDelayFeedbackLabel, "DELAY FDBK");
     fxDelayFeedbackAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_delay_feedback", fxDelayFeedbackSlider);
 
-    setupSlider(fxDelayColorSlider, fxDelayColorLabel, "D-COLOR");
+    setupSlider(fxDelayColorSlider, fxDelayColorLabel, "DELAY COLOR");
     fxDelayColorAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_delay_color", fxDelayColorSlider);
 
-    setupSlider(fxDelayMixSlider, fxDelayMixLabel, "D-MIX");
+    setupSlider(fxDelayMixSlider, fxDelayMixLabel, "DELAY MIX");
     fxDelayMixAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_delay_mix", fxDelayMixSlider);
 
-    setupSlider(fxReverbDecaySlider, fxReverbDecayLabel, "R-DECAY");
+    setupSlider(fxReverbDecaySlider, fxReverbDecayLabel, "REVERB SIZE");
     fxReverbDecayAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_reverb_decay", fxReverbDecaySlider);
 
-    setupSlider(fxReverbDampingSlider, fxReverbDampingLabel, "R-DAMP");
+    setupSlider(fxReverbDampingSlider, fxReverbDampingLabel, "DAMPING");
     fxReverbDampingAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_reverb_damping", fxReverbDampingSlider);
 
-    setupSlider(fxReverbWidthSlider, fxReverbWidthLabel, "R-WIDTH");
+    setupSlider(fxReverbWidthSlider, fxReverbWidthLabel, "WIDTH");
     fxReverbWidthAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_reverb_width", fxReverbWidthSlider);
 
-    setupSlider(fxReverbMixSlider, fxReverbMixLabel, "R-MIX");
+    setupSlider(fxReverbMixSlider, fxReverbMixLabel, "REVERB MIX");
     fxReverbMixAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "fx_reverb_mix", fxReverbMixSlider);
 
     // ----------------------------------------------------
-    // Section 5: XY Pad, Drop & Macros Setup
+    // Section 5: Macro Controls & 2D Pad
     // ----------------------------------------------------
     addAndMakeVisible(trashGlossPad);
-    trashGlossLabel.setText("TRASH vs GLOSS", juce::dontSendNotification);
-    trashGlossLabel.setFont(juce::FontOptions(11.0f, juce::Font::bold));
-    trashGlossLabel.setColour(juce::Label::textColourId, juce::Colour(0xffc5cad6));
-    trashGlossLabel.setJustificationType(juce::Justification::centred);
-    addAndMakeVisible(trashGlossLabel);
-    
     trashGlossPad.onPositionChanged = [this](float x, float y) {
         if (auto* paramX = audioProcessor.getAPVTS().getParameter("trash_gloss_x"))
             paramX->setValueNotifyingHost(x);
@@ -394,7 +496,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
             paramY->setValueNotifyingHost(y);
     };
 
-    setupSlider(macroDropSlider, macroDropLabel, "THE DROP", juce::Slider::LinearVertical);
+    setupSlider(macroDropSlider, macroDropLabel, "THE DROP");
     macroDropAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "macro_drop", macroDropSlider);
 
     setupSlider(punchSlider, punchLabel, "PUNCH");
@@ -406,18 +508,18 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     setupSlider(spaceSlider, spaceLabel, "SPACE");
     spaceAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "macro_space", spaceSlider);
 
-    setupSlider(widthSlider, widthLabel, "WIDTH");
+    setupSlider(widthSlider, widthLabel, "STEREO");
     widthAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "macro_width", widthSlider);
 
     // ----------------------------------------------------
-    // Section 6: Sub Anchor, Click, Settings
+    // Section 6: Sub Anchor, Voicing, Portamento & Settings
     // ----------------------------------------------------
     setupComboBox(subWaveBox, subWaveLabel, "SUB WAVE");
     subWaveBox.addItemList({"Sine Sub", "Square Sub"}, 1);
     subWaveAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "sub_wave", subWaveBox);
 
     setupComboBox(subOctaveBox, subOctaveLabel, "SUB OCT");
-    subOctaveBox.addItemList({"-2 Octaves", "-1 Octave"}, 1);
+    subOctaveBox.addItemList({"-2 Oct", "-1 Oct"}, 1);
     subOctaveAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "sub_octave", subOctaveBox);
 
     setupSlider(subLevelSlider, subLevelLabel, "SUB LEVEL");
@@ -522,13 +624,15 @@ void KeshaZeddSynthAudioProcessorEditor::timerCallback()
 void KeshaZeddSynthAudioProcessorEditor::setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& text, juce::Slider::SliderStyle style)
 {
     slider.setSliderStyle(style);
-    slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 55, 14);
+    slider.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffc5cad8));
+    slider.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
     addAndMakeVisible(slider);
 
     label.setText(text, juce::dontSendNotification);
-    label.setFont(juce::FontOptions(10.0f, juce::Font::bold));
-    label.setColour(juce::Label::textColourId, juce::Colour(0xffc5cad6));
+    label.setFont(juce::FontOptions(9.5f, juce::Font::bold));
     label.setJustificationType(juce::Justification::centred);
+    label.setColour(juce::Label::textColourId, juce::Colour(0xff8c92a6));
     addAndMakeVisible(label);
 }
 
@@ -537,348 +641,370 @@ void KeshaZeddSynthAudioProcessorEditor::setupComboBox(juce::ComboBox& box, juce
     addAndMakeVisible(box);
 
     label.setText(text, juce::dontSendNotification);
-    label.setFont(juce::FontOptions(10.0f, juce::Font::bold));
-    label.setColour(juce::Label::textColourId, juce::Colour(0xffc5cad6));
+    label.setFont(juce::FontOptions(9.5f, juce::Font::bold));
     label.setJustificationType(juce::Justification::centredLeft);
+    label.setColour(juce::Label::textColourId, juce::Colour(0xff8c92a6));
     addAndMakeVisible(label);
 }
 
 void KeshaZeddSynthAudioProcessorEditor::showSavePresetDialog()
 {
-    auto* w = new juce::AlertWindow ("Save User Preset", "Select a category and enter a name for your custom preset:", juce::AlertWindow::QuestionIcon);
-    w->addComboBox ("presetCategory", { "01_Basses", "02_Leads", "03_Plucks", "04_Keys & Chords", "05_Pads & Textures", "06_Transitions & FX" }, "Select Category");
-    w->addTextEditor ("presetName", "My Preset", "");
-    w->addButton ("Save", 1, juce::KeyPress (juce::KeyPress::returnKey, 0, 0));
-    w->addButton ("Cancel", 0, juce::KeyPress (juce::KeyPress::escapeKey, 0, 0));
-    w->setLookAndFeel(&getLookAndFeel());
-    
-    w->enterModalState (true, juce::ModalCallbackFunction::create([this, w](int result) {
-        if (result == 1) // Save clicked
+    auto* dialog = new juce::AlertWindow("Save User Preset", "Enter category and preset name:", juce::AlertWindow::QuestionIcon);
+    dialog->addTextEditor("category", "01_Custom", "Category:");
+    dialog->addTextEditor("name", "My Electro Sound", "Preset Name:");
+    dialog->addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey));
+    dialog->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+    dialog->enterModalState(true, juce::ModalCallbackFunction::create([this, dialog](int result)
+    {
+        if (result == 1)
         {
-            juce::String category = w->getComboBoxComponent ("presetCategory")->getText();
-            juce::String name = w->getTextEditorContents ("presetName");
-            if (category == "Select Category")
-                category = "01_Basses";
+            juce::String category = dialog->getTextEditorContents("category").trim();
+            juce::String name = dialog->getTextEditorContents("name").trim();
             if (name.isNotEmpty())
             {
+                if (category.isEmpty()) category = "01_Custom";
                 audioProcessor.getPresetManager().saveUserPreset(category, name);
-                presetBox.setText(category + " > " + name, juce::dontSendNotification);
+                presetBox.setText(name, juce::dontSendNotification);
             }
         }
-        delete w;
+        delete dialog;
     }));
 }
 
 void KeshaZeddSynthAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff12131a));
+    int w = getWidth();
+    int h = getHeight();
 
-    // Top Header Bar Background
-    g.setColour(juce::Colour(0xff1c1e29));
-    g.fillRect(0, 0, getWidth(), 55);
-    g.setColour(juce::Colour(0xff232533));
-    g.drawHorizontalLine(55, 0.0f, (float) getWidth());
+    // 1. Chassis Background (Analog Lab Graphite Matte)
+    g.fillAll(juce::Colour(0xff121318));
 
-    // Title text
-    g.setFont(juce::FontOptions(22.0f, juce::Font::bold));
-    juce::ColourGradient titleGrad(juce::Colour(0xff00f2fe), 20.0f, 25.0f,
-                                   juce::Colour(0xffff2a85), 180.0f, 25.0f, false);
-    g.setGradientFill(titleGrad);
-    g.drawText("KZ-SYNTH 1", 20, 15, 160, 30, juce::Justification::centredLeft);
+    // 2. Vintage Wooden Side Cheeks (Left & Right)
+    auto drawWoodPanel = [&](float x, float width) {
+        juce::ColourGradient woodGrad(juce::Colour(0xff452314), x, 0.0f,
+                                      juce::Colour(0xff221008), x + width, 0.0f, false);
+        g.setGradientFill(woodGrad);
+        g.fillRect(x, 0.0f, width, (float) h);
 
-    // Section outline panels helper lambda
-    auto drawSection = [&](int sx, int sy, int sw, int sh, const juce::String& title) {
-        g.setColour(juce::Colour(0xff1c1e29));
-        g.fillRoundedRectangle((float) sx, (float) sy, (float) sw, (float) sh, 8.0f);
-        
-        g.setColour(juce::Colour(0xff2a2e40));
-        g.drawRoundedRectangle((float) sx, (float) sy, (float) sw, (float) sh, 8.0f, 1.5f);
-        
-        g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
-        g.setColour(juce::Colour(0xff00f2fe));
-        g.drawText(title.toUpperCase(), sx + 15, sy + 10, sw - 30, 20, juce::Justification::centredLeft);
+        // Woodgrain hairline streaks
+        g.setColour(juce::Colour(0xff5c301c).withAlpha(0.4f));
+        for (float ly = 10.0f; ly < h; ly += 24.0f)
+            g.drawHorizontalLine(static_cast<int>(ly), x + 2.0f, x + width - 2.0f);
+
+        // Subtle bevel shadow
+        g.setColour(juce::Colour(0x55000000));
+        g.drawVerticalLine(static_cast<int>(x + width - 1.0f), 0.0f, (float) h);
     };
 
-    // Draw the 6 Main visual panels
-    drawSection(15, 65, 450, 260, "Oscillators (Morph, FM & Unison detune)");
-    drawSection(480, 65, 465, 260, "Dynamic Filter & Custom Envelope Shaper");
-    drawSection(15, 340, 450, 260, "Amp ADSR & Dual Synced LFO Modulators");
-    drawSection(480, 340, 465, 260, "Master Post FX Chain (Drive, Chorus, Delay & Reverb)");
-    drawSection(15, 615, 450, 230, "XY Morph Pad & Drop Macro Section");
-    drawSection(480, 615, 465, 230, "Sub Anchor, Click Transient & Smart Settings");
+    drawWoodPanel(0.0f, 14.0f);
+    drawWoodPanel((float) (w - 14), 14.0f);
+
+    // 3. Top Header Bar (Brushed Gunmetal)
+    juce::ColourGradient headerGrad(juce::Colour(0xff20232d), 0.0f, 0.0f,
+                                    juce::Colour(0xff14161d), 0.0f, 54.0f, false);
+    g.setGradientFill(headerGrad);
+    g.fillRect(14, 0, w - 28, 54);
+
+    g.setColour(juce::Colour(0xff2d3140));
+    g.drawHorizontalLine(54, 14.0f, (float) (w - 14));
+
+    // Title Logo in Analog Lab Style
+    g.setFont(juce::FontOptions(19.0f, juce::Font::bold));
+    g.setColour(juce::Colour(0xffffffff));
+    g.drawText("KZ-SYNTH", 28, 10, 110, 22, juce::Justification::centredLeft);
+
+    g.setFont(juce::FontOptions(8.5f, juce::Font::bold));
+    g.setColour(juce::Colour(0xffffaa00));
+    g.drawText("ANALOG LAB EDITION", 28, 30, 120, 14, juce::Justification::centredLeft);
+
+    // 4. Central OLED Screen Glass Frame
+    g.setColour(juce::Colour(0xff0d0e12));
+    g.fillRoundedRectangle(24.0f, 62.0f, (float) (w - 48), 76.0f, 6.0f);
+
+    g.setColour(juce::Colour(0xff252936));
+    g.drawRoundedRectangle(24.0f, 62.0f, (float) (w - 48), 76.0f, 6.0f, 1.2f);
+
+    // 5. Section Outline Cards Lambda (Analog Lab Modular Synth Bay Style)
+    auto drawSection = [&](int sx, int sy, int sw, int sh, const juce::String& title, const juce::Colour& accent) {
+        g.setColour(juce::Colour(0xff181a22));
+        g.fillRoundedRectangle((float) sx, (float) sy, (float) sw, (float) sh, 6.0f);
+        
+        g.setColour(juce::Colour(0xff272a38));
+        g.drawRoundedRectangle((float) sx, (float) sy, (float) sw, (float) sh, 6.0f, 1.0f);
+        
+        // Header title badge with accent LED pill
+        g.setColour(accent);
+        g.fillRoundedRectangle((float) (sx + 14), (float) (sy + 12), 4.0f, 12.0f, 2.0f);
+
+        g.setFont(juce::FontOptions(10.5f, juce::Font::bold));
+        g.setColour(juce::Colour(0xffd5d9e8));
+        g.drawText(title.toUpperCase(), sx + 24, sy + 8, sw - 40, 20, juce::Justification::centredLeft);
+    };
+
+    // Draw the 6 modular synth bays with Analog Lab accents
+    drawSection(24, 146, 488, 240, "Oscillators & 7-Voice Stereo Unison", juce::Colour(0xff00d4ff));
+    drawSection(526, 146, 488, 240, "Dynamic Ladder Filter & Custom Formants", juce::Colour(0xffffaa00));
+    drawSection(24, 396, 488, 240, "Amp Envelope & Dual Synced LFO Modulators", juce::Colour(0xff00d4ff));
+    drawSection(526, 396, 488, 240, "Master Post FX Chain (Drive, Chorus, Delay & Reverb)", juce::Colour(0xffff5500));
+    drawSection(24, 646, 488, 255, "XY Performance Pad & Drop Macro Section", juce::Colour(0xffff2a85));
+    drawSection(526, 646, 488, 255, "Voicing, Portamento Glide, Sub Anchor & Transient Shaper", juce::Colour(0xff00ffaa));
 }
 
 void KeshaZeddSynthAudioProcessorEditor::resized()
 {
-    // Header Bar Layout
-    prevPresetButton.setBounds(180, 22, 22, 26);
-    presetBox.setBounds(205, 22, 175, 26);
-    nextPresetButton.setBounds(383, 22, 22, 26);
+    // ----------------------------------------------------
+    // Header Bar Layout (y: 0 to 54)
+    // ----------------------------------------------------
+    prevPresetButton.setBounds(155, 14, 22, 26);
+    presetBox.setBounds(180, 14, 190, 26);
+    nextPresetButton.setBounds(372, 14, 22, 26);
 
-    savePresetButton.setBounds(410, 22, 45, 26);
-    loadPresetButton.setBounds(458, 22, 45, 26);
-    diceButton.setBounds(506, 22, 55, 26);
+    savePresetButton.setBounds(400, 14, 46, 26);
+    loadPresetButton.setBounds(450, 14, 46, 26);
+    diceButton.setBounds(500, 14, 65, 26);
 
-    zeddifyButton.setBounds(566, 22, 75, 26);
-    dragMidiButton.setBounds(646, 22, 85, 26);
+    zeddifyButton.setBounds(575, 14, 85, 26);
+    dragMidiButton.setBounds(665, 14, 90, 26);
 
-    autoMasterButton.setBounds(736, 22, 90, 26);
+    autoMasterButton.setBounds(762, 14, 105, 26);
 
-    autoMasterIntensityLabel.setBounds(830, 5, 35, 15);
-    autoMasterIntensitySlider.setBounds(830, 18, 35, 34);
+    autoMasterIntensityLabel.setBounds(872, 2, 45, 14);
+    autoMasterIntensitySlider.setBounds(872, 14, 45, 36);
 
-    masterVolLabel.setBounds(870, 5, 45, 15);
-    masterVolSlider.setBounds(870, 18, 45, 34);
+    masterVolLabel.setBounds(922, 2, 45, 14);
+    masterVolSlider.setBounds(922, 14, 45, 36);
 
-    vuMeter.setBounds(920, 18, 10, 32);
+    vuMeter.setBounds(974, 14, 10, 34);
+    voiceCountLabel.setBounds(988, 14, 38, 26);
 
-    voiceCountLabel.setBounds(932, 18, 20, 26);
+    // ----------------------------------------------------
+    // Central OLED Visualizer Glass Screen (y: 64 to 138)
+    // ----------------------------------------------------
+    audioProcessor.getVisualizer().setBounds(26, 64, getWidth() - 52, 72);
 
-    audioProcessor.getVisualizer().setBounds(15, 55, 930, 80);
+    // ----------------------------------------------------
+    // Section 1: Oscillators & Unison (x: 24, y: 146, w: 488, h: 240)
+    // ----------------------------------------------------
+    osc1ShapeLabel.setBounds(36, 172, 72, 14);
+    osc1ShapeSlider.setBounds(36, 186, 72, 46);
 
-    // Section 1: Oscillators & Unison (x: 15, y: 65, w: 450, h: 260)
-    osc1ShapeLabel.setBounds(30, 95, 80, 15);
-    osc1ShapeSlider.setBounds(30, 110, 80, 50);
+    osc1OctaveLabel.setBounds(112, 172, 48, 14);
+    osc1OctaveBox.setBounds(112, 188, 48, 22);
 
-    osc1OctaveLabel.setBounds(120, 95, 50, 15);
-    osc1OctaveBox.setBounds(120, 112, 50, 24);
+    osc1DetuneLabel.setBounds(164, 172, 54, 14);
+    osc1DetuneSlider.setBounds(164, 186, 54, 46);
 
-    osc1DetuneLabel.setBounds(180, 95, 55, 15);
-    osc1DetuneSlider.setBounds(180, 110, 55, 50);
+    osc1LevelLabel.setBounds(222, 172, 54, 14);
+    osc1LevelSlider.setBounds(222, 186, 54, 46);
 
-    osc1LevelLabel.setBounds(245, 95, 55, 15);
-    osc1LevelSlider.setBounds(245, 110, 55, 50);
+    unisonCountLabel.setBounds(282, 172, 65, 14);
+    unisonCountBox.setBounds(282, 188, 65, 22);
 
-    unisonCountLabel.setBounds(310, 95, 60, 15);
-    unisonCountBox.setBounds(310, 112, 60, 24);
+    unisonDetuneLabel.setBounds(352, 172, 58, 14);
+    unisonDetuneSlider.setBounds(352, 186, 58, 46);
 
-    unisonDetuneLabel.setBounds(380, 95, 60, 15);
-    unisonDetuneSlider.setBounds(380, 110, 60, 50);
+    // Oscillator 2 Row (y: 255)
+    osc2ShapeLabel.setBounds(36, 255, 72, 14);
+    osc2ShapeSlider.setBounds(36, 269, 72, 46);
 
-    osc2ShapeLabel.setBounds(30, 175, 80, 15);
-    osc2ShapeSlider.setBounds(30, 190, 80, 50);
+    osc2OctaveLabel.setBounds(112, 255, 48, 14);
+    osc2OctaveBox.setBounds(112, 271, 48, 22);
 
-    osc2OctaveLabel.setBounds(120, 175, 50, 15);
-    osc2OctaveBox.setBounds(120, 192, 50, 24);
+    osc2DetuneLabel.setBounds(164, 255, 54, 14);
+    osc2DetuneSlider.setBounds(164, 269, 54, 46);
 
-    osc2DetuneLabel.setBounds(180, 175, 55, 15);
-    osc2DetuneSlider.setBounds(180, 190, 55, 50);
+    osc2LevelLabel.setBounds(222, 255, 54, 14);
+    osc2LevelSlider.setBounds(222, 269, 54, 46);
 
-    osc2LevelLabel.setBounds(245, 175, 55, 15);
-    osc2LevelSlider.setBounds(245, 190, 55, 50);
+    oscFmLabel.setBounds(282, 255, 65, 14);
+    oscFmSlider.setBounds(282, 269, 65, 46);
 
-    oscFmLabel.setBounds(310, 175, 60, 15);
-    oscFmSlider.setBounds(310, 190, 60, 50);
+    oscSyncLabel.setBounds(352, 255, 65, 14);
+    oscSyncBox.setBounds(352, 271, 65, 22);
 
-    oscSyncLabel.setBounds(380, 175, 60, 15);
-    oscSyncBox.setBounds(380, 192, 60, 24);
+    // ----------------------------------------------------
+    // Section 2: Dynamic Filter & Envelope (x: 526, y: 146, w: 488, h: 240)
+    // ----------------------------------------------------
+    filterModeLabel.setBounds(538, 172, 75, 14);
+    filterModeBox.setBounds(538, 188, 75, 22);
 
-    // Section 2: Filter & Filter Env (x: 480, y: 65, w: 465, h: 260)
-    filterModeLabel.setBounds(495, 95, 90, 15);
-    filterModeBox.setBounds(495, 112, 100, 24);
+    filterCutoffLabel.setBounds(618, 172, 52, 14);
+    filterCutoffSlider.setBounds(618, 186, 52, 46);
 
-    filterCutoffLabel.setBounds(610, 95, 50, 15);
-    filterCutoffSlider.setBounds(610, 110, 50, 50);
+    filterResLabel.setBounds(674, 172, 52, 14);
+    filterResSlider.setBounds(674, 186, 52, 46);
 
-    filterResLabel.setBounds(670, 95, 50, 15);
-    filterResSlider.setBounds(670, 110, 50, 50);
+    filterDriveLabel.setBounds(730, 172, 50, 14);
+    filterDriveSlider.setBounds(730, 186, 50, 46);
 
-    filterDriveLabel.setBounds(730, 95, 50, 15);
-    filterDriveSlider.setBounds(730, 110, 50, 50);
+    filterEnvAmtLabel.setBounds(784, 172, 52, 14);
+    filterEnvAmtSlider.setBounds(784, 186, 52, 46);
 
-    filterEnvAmtLabel.setBounds(790, 95, 50, 15);
-    filterEnvAmtSlider.setBounds(790, 110, 50, 50);
+    filterKeyTrackLabel.setBounds(840, 172, 54, 14);
+    filterKeyTrackSlider.setBounds(840, 186, 54, 46);
 
-    filterKeyTrackLabel.setBounds(850, 95, 50, 15);
-    filterKeyTrackSlider.setBounds(850, 110, 50, 50);
+    filterLfoModLabel.setBounds(898, 172, 50, 14);
+    filterLfoModSlider.setBounds(898, 186, 50, 46);
 
-    filterLfoModLabel.setBounds(495, 145, 60, 15);
-    filterLfoModSlider.setBounds(495, 160, 60, 45);
+    formantMorphLabel.setBounds(952, 172, 48, 14);
+    formantMorphSlider.setBounds(952, 186, 48, 46);
 
-    formantMorphLabel.setBounds(565, 145, 60, 15);
-    formantMorphSlider.setBounds(565, 160, 60, 45);
+    // Filter Envelope ADSR Row (y: 255)
+    filterAttackLabel.setBounds(548, 255, 52, 14);
+    filterAttackSlider.setBounds(548, 269, 52, 46);
 
-    filterCurveLabel.setBounds(635, 145, 60, 15);
-    filterCurveSlider.setBounds(635, 160, 60, 45);
+    filterDecayLabel.setBounds(608, 255, 52, 14);
+    filterDecaySlider.setBounds(608, 269, 52, 46);
 
-    int filterAdsrY = 210;
-    int filterAdsrH = 100;
-    filterAttackLabel.setBounds(710, filterAdsrY - 15, 50, 15);
-    filterAttackSlider.setBounds(710, filterAdsrY, 50, filterAdsrH);
+    filterSustainLabel.setBounds(668, 255, 52, 14);
+    filterSustainSlider.setBounds(668, 269, 52, 46);
 
-    filterDecayLabel.setBounds(765, filterAdsrY - 15, 50, 15);
-    filterDecaySlider.setBounds(765, filterAdsrY, 50, filterAdsrH);
+    filterReleaseLabel.setBounds(728, 255, 52, 14);
+    filterReleaseSlider.setBounds(728, 269, 52, 46);
 
-    filterSustainLabel.setBounds(820, filterAdsrY - 15, 50, 15);
-    filterSustainSlider.setBounds(820, filterAdsrY, 50, filterAdsrH);
+    filterCurveLabel.setBounds(788, 255, 52, 14);
+    filterCurveSlider.setBounds(788, 269, 52, 46);
 
-    filterReleaseLabel.setBounds(875, filterAdsrY - 15, 50, 15);
-    filterReleaseSlider.setBounds(875, filterAdsrY, 50, filterAdsrH);
+    // ----------------------------------------------------
+    // Section 3: Amp Envelope & Dual LFOs (x: 24, y: 396, w: 488, h: 240)
+    // ----------------------------------------------------
+    ampAttackLabel.setBounds(36, 422, 54, 14);
+    ampAttackSlider.setBounds(36, 436, 54, 46);
 
-    // Section 3: Amp ADSR & Modulation (x: 15, y: 340, w: 450, h: 260)
-    int ampAdsrY = 380;
-    int ampAdsrHeight = 110;
-    ampAttackLabel.setBounds(30, ampAdsrY - 15, 50, 15);
-    ampAttackSlider.setBounds(30, ampAdsrY, 50, ampAdsrHeight);
+    ampDecayLabel.setBounds(94, 422, 54, 14);
+    ampDecaySlider.setBounds(94, 436, 54, 46);
 
-    ampDecayLabel.setBounds(85, ampAdsrY - 15, 50, 15);
-    ampDecaySlider.setBounds(85, ampAdsrY, 50, ampAdsrHeight);
+    ampSustainLabel.setBounds(152, 422, 54, 14);
+    ampSustainSlider.setBounds(152, 436, 54, 46);
 
-    ampSustainLabel.setBounds(140, ampAdsrY - 15, 50, 15);
-    ampSustainSlider.setBounds(140, ampAdsrY, 50, ampAdsrHeight);
+    ampReleaseLabel.setBounds(210, 422, 54, 14);
+    ampReleaseSlider.setBounds(210, 436, 54, 46);
 
-    ampReleaseLabel.setBounds(195, ampAdsrY - 15, 50, 15);
-    ampReleaseSlider.setBounds(195, ampAdsrY, 50, ampAdsrHeight);
+    ampCurveLabel.setBounds(268, 422, 54, 14);
+    ampCurveSlider.setBounds(268, 436, 54, 46);
 
-    ampCurveLabel.setBounds(255, ampAdsrY - 15, 60, 15);
-    ampCurveSlider.setBounds(255, ampAdsrY, 60, 50);
+    // LFO 1 Row
+    lfo1WaveLabel.setBounds(36, 502, 68, 14);
+    lfo1WaveBox.setBounds(36, 518, 68, 22);
 
-    // LFO controls in Section 3 bottom/right
-    int lfoY = 510;
-    lfo1WaveLabel.setBounds(30, lfoY - 15, 80, 15);
-    lfo1WaveBox.setBounds(30, lfoY, 80, 24);
+    lfo1RateLabel.setBounds(110, 502, 60, 14);
+    lfo1RateBox.setBounds(110, 518, 60, 22);
 
-    lfo1RateLabel.setBounds(120, lfoY - 15, 60, 15);
-    lfo1RateBox.setBounds(120, lfoY, 60, 24);
+    lfo1ToCutoffLabel.setBounds(176, 502, 58, 14);
+    lfo1ToCutoffSlider.setBounds(176, 516, 58, 46);
 
-    lfo1ToCutoffLabel.setBounds(190, lfoY - 15, 75, 15);
-    lfo1ToCutoffSlider.setBounds(190, lfoY, 75, 45);
+    lfo1ToShapeLabel.setBounds(238, 502, 58, 14);
+    lfo1ToShapeSlider.setBounds(238, 516, 58, 46);
 
-    lfo1ToShapeLabel.setBounds(275, lfoY - 15, 70, 15);
-    lfo1ToShapeSlider.setBounds(275, lfoY, 70, 45);
+    // LFO 2 Row
+    lfo2WaveLabel.setBounds(302, 502, 68, 14);
+    lfo2WaveBox.setBounds(302, 518, 68, 22);
 
-    int lfo2Y = 555;
-    lfo2WaveLabel.setBounds(30, lfo2Y - 15, 80, 15);
-    lfo2WaveBox.setBounds(30, lfo2Y, 80, 24);
+    lfo2RateLabel.setBounds(374, 502, 60, 14);
+    lfo2RateBox.setBounds(374, 518, 60, 22);
 
-    lfo2RateLabel.setBounds(120, lfo2Y - 15, 60, 15);
-    lfo2RateBox.setBounds(120, lfo2Y, 60, 24);
+    lfo2ToPitchLabel.setBounds(438, 502, 58, 14);
+    lfo2ToPitchSlider.setBounds(438, 516, 58, 46);
 
-    lfo2ToPitchLabel.setBounds(190, lfo2Y - 15, 75, 15);
-    lfo2ToPitchSlider.setBounds(190, lfo2Y, 75, 45);
+    // ----------------------------------------------------
+    // Section 4: Post FX Chain (x: 526, y: 396, w: 488, h: 240)
+    // ----------------------------------------------------
+    fxDriveLabel.setBounds(538, 422, 54, 14);
+    fxDriveSlider.setBounds(538, 436, 54, 46);
 
-    lfo2ToPanLabel.setBounds(275, lfo2Y - 15, 70, 15);
-    lfo2ToPanSlider.setBounds(275, lfo2Y, 70, 45);
+    fxChorusRateLabel.setBounds(600, 422, 58, 14);
+    fxChorusRateSlider.setBounds(600, 436, 58, 46);
 
-    // Section 4: Post FX (x: 480, y: 340, w: 465, h: 260)
-    fxDriveLabel.setBounds(495, 370, 60, 15);
-    fxDriveSlider.setBounds(495, 385, 60, 50);
+    fxChorusDepthLabel.setBounds(664, 422, 58, 14);
+    fxChorusDepthSlider.setBounds(664, 436, 58, 46);
 
-    fxChorusRateLabel.setBounds(565, 370, 60, 15);
-    fxChorusRateSlider.setBounds(565, 385, 60, 50);
+    fxChorusMixLabel.setBounds(728, 422, 58, 14);
+    fxChorusMixSlider.setBounds(728, 436, 58, 46);
 
-    fxChorusDepthLabel.setBounds(635, 370, 60, 15);
-    fxChorusDepthSlider.setBounds(635, 385, 60, 50);
+    fxDelayTimeLabel.setBounds(792, 422, 58, 14);
+    fxDelayTimeSlider.setBounds(792, 436, 58, 46);
 
-    fxChorusMixLabel.setBounds(705, 370, 60, 15);
-    fxChorusMixSlider.setBounds(705, 385, 60, 50);
+    fxDelayFeedbackLabel.setBounds(856, 422, 58, 14);
+    fxDelayFeedbackSlider.setBounds(856, 436, 58, 46);
 
-    // Delay
-    fxDelayTimeLabel.setBounds(495, 450, 60, 15);
-    fxDelayTimeSlider.setBounds(495, 465, 60, 50);
+    fxDelayColorLabel.setBounds(920, 422, 58, 14);
+    fxDelayColorSlider.setBounds(920, 436, 58, 46);
 
-    fxDelayFeedbackLabel.setBounds(565, 450, 65, 15);
-    fxDelayFeedbackSlider.setBounds(565, 465, 60, 50);
+    // Delay Mix & Reverbs Row (y: 502)
+    fxDelayMixLabel.setBounds(538, 502, 58, 14);
+    fxDelayMixSlider.setBounds(538, 516, 58, 46);
 
-    fxDelayColorLabel.setBounds(635, 450, 60, 15);
-    fxDelayColorSlider.setBounds(635, 465, 60, 50);
+    fxReverbDecayLabel.setBounds(608, 502, 58, 14);
+    fxReverbDecaySlider.setBounds(608, 516, 58, 46);
 
-    fxDelayMixLabel.setBounds(705, 450, 60, 15);
-    fxDelayMixSlider.setBounds(705, 465, 60, 50);
+    fxReverbDampingLabel.setBounds(678, 502, 58, 14);
+    fxReverbDampingSlider.setBounds(678, 516, 58, 46);
 
-    // Reverb
-    fxReverbDecayLabel.setBounds(775, 370, 60, 15);
-    fxReverbDecaySlider.setBounds(775, 385, 60, 50);
+    fxReverbWidthLabel.setBounds(748, 502, 58, 14);
+    fxReverbWidthSlider.setBounds(748, 516, 58, 46);
 
-    fxReverbDampingLabel.setBounds(845, 370, 60, 15);
-    fxReverbDampingSlider.setBounds(845, 385, 60, 50);
+    fxReverbMixLabel.setBounds(818, 502, 58, 14);
+    fxReverbMixSlider.setBounds(818, 516, 58, 46);
 
-    fxReverbWidthLabel.setBounds(775, 450, 60, 15);
-    fxReverbWidthSlider.setBounds(775, 465, 60, 50);
+    // ----------------------------------------------------
+    // Section 5: Performance Pad & Macros (x: 24, y: 646, w: 488, h: 255)
+    // ----------------------------------------------------
+    trashGlossPad.setBounds(36, 676, 145, 140);
 
-    fxReverbMixLabel.setBounds(845, 450, 60, 15);
-    fxReverbMixSlider.setBounds(845, 465, 60, 50);
+    macroDropLabel.setBounds(190, 674, 58, 14);
+    macroDropSlider.setBounds(190, 688, 58, 50);
 
-    // Section 5: XY Pad, Drop & Macros (x: 15, y: 615, w: 450, h: 230)
-    trashGlossLabel.setBounds(30, 645, 150, 15);
-    trashGlossPad.setBounds(30, 662, 150, 150);
+    punchLabel.setBounds(252, 674, 58, 14);
+    punchSlider.setBounds(252, 688, 58, 50);
 
-    macroDropLabel.setBounds(200, 645, 60, 15);
-    macroDropSlider.setBounds(200, 662, 60, 150);
+    gritLabel.setBounds(314, 674, 58, 14);
+    gritSlider.setBounds(314, 688, 58, 50);
 
-    // 2x2 Macro layout
-    punchLabel.setBounds(280, 645, 60, 15);
-    punchSlider.setBounds(280, 660, 60, 60);
+    spaceLabel.setBounds(376, 674, 58, 14);
+    spaceSlider.setBounds(376, 688, 58, 50);
 
-    gritLabel.setBounds(360, 645, 60, 15);
-    gritSlider.setBounds(360, 660, 60, 60);
+    widthLabel.setBounds(438, 674, 58, 14);
+    widthSlider.setBounds(438, 688, 58, 50);
 
-    spaceLabel.setBounds(280, 730, 60, 15);
-    spaceSlider.setBounds(280, 745, 60, 60);
+    // ----------------------------------------------------
+    // Section 6: Voicing, Glide & Sub (x: 526, y: 646, w: 488, h: 255)
+    // ----------------------------------------------------
+    playModeLabel.setBounds(538, 674, 75, 14);
+    playModeBox.setBounds(538, 690, 75, 22);
 
-    widthLabel.setBounds(360, 730, 60, 15);
-    widthSlider.setBounds(360, 745, 60, 60);
+    glideModeLabel.setBounds(618, 674, 75, 14);
+    glideModeBox.setBounds(618, 690, 75, 22);
 
-    // Section 6: Sub Anchor, Formant & Settings (x: 480, y: 615, w: 465, h: 230)
-    subWaveLabel.setBounds(495, 645, 65, 15);
-    subWaveBox.setBounds(495, 660, 65, 24);
+    glideTimeLabel.setBounds(698, 674, 55, 14);
+    glideTimeSlider.setBounds(698, 688, 55, 46);
 
-    subOctaveLabel.setBounds(565, 645, 55, 15);
-    subOctaveBox.setBounds(565, 660, 55, 24);
+    chordModeLabel.setBounds(760, 674, 75, 14);
+    chordModeBox.setBounds(760, 690, 75, 22);
 
-    subLevelLabel.setBounds(630, 645, 60, 15);
-    subLevelSlider.setBounds(630, 660, 60, 45);
+    chordTypeLabel.setBounds(840, 674, 75, 14);
+    chordTypeBox.setBounds(840, 690, 75, 22);
 
-    subDriveLabel.setBounds(695, 645, 60, 15);
-    subDriveSlider.setBounds(695, 660, 60, 45);
+    // Sub Anchor Row (y: 755)
+    subWaveLabel.setBounds(538, 755, 65, 14);
+    subWaveBox.setBounds(538, 770, 65, 22);
 
-    playModeLabel.setBounds(765, 645, 85, 15);
-    playModeBox.setBounds(765, 660, 85, 24);
+    subOctaveLabel.setBounds(608, 755, 55, 14);
+    subOctaveBox.setBounds(608, 770, 55, 22);
 
-    glideModeLabel.setBounds(855, 645, 85, 15);
-    glideModeBox.setBounds(855, 660, 85, 24);
+    subLevelLabel.setBounds(668, 755, 55, 14);
+    subLevelSlider.setBounds(668, 768, 55, 46);
 
-    chordModeLabel.setBounds(765, 690, 85, 15);
-    chordModeBox.setBounds(765, 705, 85, 24);
+    subDriveLabel.setBounds(728, 755, 55, 14);
+    subDriveSlider.setBounds(728, 768, 55, 46);
 
-    chordTypeLabel.setBounds(855, 690, 85, 15);
-    chordTypeBox.setBounds(855, 705, 85, 24);
+    // Transient Shaper Row
+    transientTypeLabel.setBounds(788, 755, 75, 14);
+    transientTypeBox.setBounds(788, 770, 75, 22);
 
-    pitchDropOctavesLabel.setBounds(495, 715, 65, 15);
-    pitchDropOctavesSlider.setBounds(495, 730, 65, 45);
+    clickLevelLabel.setBounds(868, 755, 60, 14);
+    clickLevelSlider.setBounds(868, 768, 60, 46);
 
-    pitchDropTimeLabel.setBounds(565, 715, 60, 15);
-    pitchDropTimeSlider.setBounds(565, 730, 60, 45);
-
-    glideTimeLabel.setBounds(630, 715, 60, 15);
-    glideTimeSlider.setBounds(630, 730, 60, 45);
-
-    // Pumper & Mono Maker in Section 6 bottom
-    pumpActiveLabel.setBounds(700, 765, 65, 15);
-    pumpActiveBox.setBounds(700, 780, 65, 24);
-
-    pumpDivisionLabel.setBounds(770, 765, 70, 15);
-    pumpDivisionBox.setBounds(770, 780, 70, 24);
-
-    pumpDepthLabel.setBounds(495, 780, 65, 15);
-    pumpDepthSlider.setBounds(495, 795, 65, 45);
-
-    pumpCurveLabel.setBounds(565, 780, 60, 15);
-    pumpCurveSlider.setBounds(565, 795, 60, 45);
-
-    monoMakerActiveLabel.setBounds(845, 765, 90, 15);
-    monoMakerActiveBox.setBounds(845, 780, 90, 24);
-
-    monoMakerFreqLabel.setBounds(630, 780, 60, 15);
-    monoMakerFreqSlider.setBounds(630, 795, 60, 45);
-
-    // Transient Shaper placement
-    transientTypeLabel.setBounds(700, 715, 90, 15);
-    transientTypeBox.setBounds(700, 730, 90, 24);
-
-    clickLevelLabel.setBounds(800, 715, 70, 15);
-    clickLevelSlider.setBounds(800, 730, 65, 45);
-
-    transientDecayLabel.setBounds(875, 715, 70, 15);
-    transientDecaySlider.setBounds(875, 730, 65, 45);
+    transientDecayLabel.setBounds(932, 755, 60, 14);
+    transientDecaySlider.setBounds(932, 768, 60, 46);
 }

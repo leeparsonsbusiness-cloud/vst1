@@ -6,7 +6,11 @@
 #include <vector>
 #include <string>
 
-// Drag-and-Drop MIDI Export Handle Component
+using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
+using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
+using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
+
+// Drag-and-Drop MIDI Export Handle Component (Analog Lab Style Badge)
 class DragMidiButton : public juce::Component
 {
 public:
@@ -17,15 +21,16 @@ public:
     {
         auto bounds = getLocalBounds().toFloat().reduced(1.0f);
         
-        juce::Colour bgColour = isHovered ? juce::Colour(0xff004455) : juce::Colour(0xff12232c);
+        juce::Colour bgColour = isHovered ? juce::Colour(0xff2d3142) : juce::Colour(0xff1a1c24);
         g.setColour(bgColour);
         g.fillRoundedRectangle(bounds, 4.0f);
 
-        g.setColour(juce::Colour(0xff00f2fe));
-        g.drawRoundedRectangle(bounds, 4.0f, isHovered ? 2.0f : 1.0f);
+        g.setColour(isHovered ? juce::Colour(0xffff9900) : juce::Colour(0xff3a3e52));
+        g.drawRoundedRectangle(bounds, 4.0f, 1.2f);
 
+        g.setColour(isHovered ? juce::Colour(0xffffaa33) : juce::Colour(0xffc5cad8));
         g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
-        g.drawText("≡ DRAG MIDI ≡", bounds, juce::Justification::centred, false);
+        g.drawText("EXPORT MIDI", bounds, juce::Justification::centred, false);
     }
 
     void mouseEnter(const juce::MouseEvent&) override { isHovered = true; repaint(); }
@@ -45,13 +50,13 @@ private:
     bool isHovered = false;
 };
 
-// Stereo Peak/RMS Output VU Meter Component
+// Stereo Peak/RMS Output VU Meter Component (Analog Lab Style LED ladder)
 class VUMeterComponent : public juce::Component, private juce::Timer
 {
 public:
     VUMeterComponent(KeshaZeddSynthAudioProcessor& p) : processor(p)
     {
-        startTimerHz(30); // 30 FPS update rate
+        startTimerHz(30);
     }
 
     ~VUMeterComponent() override
@@ -73,12 +78,12 @@ public:
     void paint(juce::Graphics& g) override
     {
         auto bounds = getLocalBounds().toFloat();
-        g.fillAll(juce::Colour(0xff0e0f14));
+        g.fillAll(juce::Colour(0xff0d0e12));
 
-        g.setColour(juce::Colour(0xff232533));
-        g.drawRoundedRectangle(bounds, 3.0f, 1.0f);
+        g.setColour(juce::Colour(0xff22242e));
+        g.drawRoundedRectangle(bounds, 2.0f, 1.0f);
 
-        float barWidth = (bounds.getWidth() - 6.0f) * 0.5f;
+        float barWidth = (bounds.getWidth() - 5.0f) * 0.5f;
         float h = bounds.getHeight() - 4.0f;
 
         auto drawBar = [&](float x, float level)
@@ -86,16 +91,16 @@ public:
             float fillH = juce::jlimit(0.0f, h, level * h);
             float y = bounds.getBottom() - 2.0f - fillH;
 
-            juce::ColourGradient grad(juce::Colour(0xff00ff88), x, bounds.getBottom(),
-                                      juce::Colour(0xffff0055), x, bounds.getY(), false);
-            grad.addColour(0.7f, juce::Colour(0xffffcc00));
+            juce::ColourGradient grad(juce::Colour(0xff00d4ff), x, bounds.getBottom(),
+                                      juce::Colour(0xffff3366), x, bounds.getY(), false);
+            grad.addColour(0.6f, juce::Colour(0xffffaa00));
 
             g.setGradientFill(grad);
             g.fillRect(x, y, barWidth, fillH);
         };
 
-        drawBar(bounds.getX() + 2.0f, levelL);
-        drawBar(bounds.getX() + 4.0f + barWidth, levelR);
+        drawBar(bounds.getX() + 1.5f, levelL);
+        drawBar(bounds.getX() + 3.5f + barWidth, levelR);
     }
 
 private:
@@ -104,7 +109,7 @@ private:
     float levelR = 0.0f;
 };
 
-// Interactive 2D X/Y Pad Component
+// Interactive 2D X/Y Pad Component (Analog Lab Dark Glass Style)
 class XYPad : public juce::Component
 {
 public:
@@ -125,47 +130,43 @@ public:
     
     void paint(juce::Graphics& g) override
     {
-        g.fillAll(juce::Colour(0xff12131a));
+        g.fillAll(juce::Colour(0xff101116));
         
-        g.setColour(juce::Colour(0xff232533));
-        g.drawRoundedRectangle(getLocalBounds().toFloat(), 6.0f, 1.5f);
+        g.setColour(juce::Colour(0xff2b2e3c));
+        g.drawRoundedRectangle(getLocalBounds().toFloat(), 4.0f, 1.2f);
         
-        // Draw grid lines
-        g.setColour(juce::Colour(0xff232533).withAlpha(0.5f));
-        float dashes[2] = { 4.0f, 4.0f };
+        // Draw crosshair grid lines
+        g.setColour(juce::Colour(0xff222530));
+        float dashes[2] = { 3.0f, 3.0f };
         g.drawDashedLine(juce::Line<float>(getWidth() * 0.5f, 0.0f, getWidth() * 0.5f, getHeight()), dashes, 2);
         g.drawDashedLine(juce::Line<float>(0.0f, getHeight() * 0.5f, getWidth(), getHeight() * 0.5f), dashes, 2);
         
         // Grid Labels
-        g.setColour(juce::Colour(0xff8c90b0).withAlpha(0.6f));
-        g.setFont(10.0f);
-        g.drawText("GRIT", 5, getHeight() / 2 - 12, 40, 10, juce::Justification::left);
-        g.drawText("TRASH", getWidth() - 45, getHeight() / 2 - 12, 40, 10, juce::Justification::right);
+        g.setColour(juce::Colour(0xff757a8e));
+        g.setFont(juce::FontOptions(9.5f, juce::Font::bold));
+        g.drawText("GRIT", 6, getHeight() / 2 - 10, 40, 10, juce::Justification::left);
+        g.drawText("TRASH", getWidth() - 46, getHeight() / 2 - 10, 40, 10, juce::Justification::right);
         g.drawText("GLOSS", getWidth() / 2 - 20, 5, 40, 10, juce::Justification::centred);
-        g.drawText("CLEAN", getWidth() / 2 - 20, getHeight() - 15, 40, 10, juce::Justification::centred);
+        g.drawText("CLEAN", getWidth() / 2 - 20, getHeight() - 14, 40, 10, juce::Justification::centred);
 
-        // Draw thumb position
+        // Draw glowing puck
         float thumbX = xPos * getWidth();
         float thumbY = (1.0f - yPos) * getHeight();
         
-        // Neon glow gradient thumb
-        juce::ColourGradient grad(juce::Colour(0xff00f2fe), thumbX, thumbY,
-                                  juce::Colour(0xffff2a85), thumbX + 15.0f, thumbY + 15.0f, true);
-        g.setGradientFill(grad);
-        g.fillEllipse(thumbX - 9.0f, thumbY - 9.0f, 18.0f, 18.0f);
+        g.setColour(juce::Colour(0x33ffaa00));
+        g.fillEllipse(thumbX - 12.0f, thumbY - 12.0f, 24.0f, 24.0f);
+
+        juce::ColourGradient puckGrad(juce::Colour(0xffffaa00), thumbX - 6.0f, thumbY - 6.0f,
+                                     juce::Colour(0xffff5500), thumbX + 6.0f, thumbY + 6.0f, false);
+        g.setGradientFill(puckGrad);
+        g.fillEllipse(thumbX - 7.0f, thumbY - 7.0f, 14.0f, 14.0f);
+
         g.setColour(juce::Colours::white);
-        g.drawEllipse(thumbX - 9.0f, thumbY - 9.0f, 18.0f, 18.0f, 2.0f);
+        g.fillEllipse(thumbX - 2.0f, thumbY - 2.0f, 4.0f, 4.0f);
     }
     
-    void mouseDown(const juce::MouseEvent& e) override
-    {
-        updatePosition(e.position);
-    }
-    
-    void mouseDrag(const juce::MouseEvent& e) override
-    {
-        updatePosition(e.position);
-    }
+    void mouseDown(const juce::MouseEvent& e) override { updatePosition(e.position); }
+    void mouseDrag(const juce::MouseEvent& e) override { updatePosition(e.position); }
     
 private:
     void updatePosition(juce::Point<float> p)
@@ -181,7 +182,7 @@ private:
     float yPos = 0.5f;
 };
 
-// Categorized Preset Dropdown Menu Component
+// Categorized Preset Dropdown Menu Component (Analog Lab Browser Style)
 class PresetComboBox : public juce::ComboBox
 {
 public:
@@ -239,11 +240,11 @@ public:
         menu.addSubMenu("04_Keys & Chords", keysMenu);
         
         juce::PopupMenu padsMenu;
-        padsMenu.addItem(31, "Lush Sidechain Pad");
-        padsMenu.addItem(32, "Shimmer Dream Pad");
-        padsMenu.addItem(33, "Dark Cinema Drone");
-        padsMenu.addItem(34, "Retro Vapor Sweep");
-        padsMenu.addItem(35, "Glacier Atmosphere");
+        padsMenu.addItem(31, "Stadium Sidechain Swell");
+        padsMenu.addItem(32, "Shimmering Pop Air");
+        padsMenu.addItem(33, "Sunset Warmth Pad");
+        padsMenu.addItem(34, "Dark Cinema Swell");
+        padsMenu.addItem(35, "Euphoria Choir Wash");
         menu.addSubMenu("05_Pads & Textures", padsMenu);
         
         juce::PopupMenu fxMenu;
@@ -282,11 +283,22 @@ public:
                 }
                 userMenu.addSubMenu(cat.getFileName(), catMenu);
             }
+            
+            juce::Array<juce::File> rootFiles;
+            userDir.findChildFiles(rootFiles, juce::File::findFiles, false, "*.json");
+            for (auto& file : rootFiles)
+            {
+                userMenu.addItem(itemId, file.getFileNameWithoutExtension());
+                userFiles.push_back(file);
+                itemId++;
+            }
+            
             menu.addSubMenu("User Presets", userMenu);
         }
 
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
-            [this, userFiles](int result) {
+            [this, userFiles](int result)
+            {
                 if (result == 0) return;
                 if (result >= 1 && result <= 40)
                 {
@@ -305,7 +317,7 @@ public:
     }
 };
 
-// Modern Dark-Mode Custom LookAndFeel
+// Analog Lab Inspired LookAndFeel (Brushed Gunmetal, Warm Wood Cheeks, Illuminated Knobs)
 class ModernSynthLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
@@ -323,6 +335,13 @@ public:
     void drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown,
                       int buttonX, int buttonY, int buttonW, int buttonH,
                       juce::ComboBox& box) override;
+
+    void drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
+                          bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+
+    void drawButtonBackground(juce::Graphics& g, juce::Button& button,
+                              const juce::Colour& backgroundColour,
+                              bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
 };
 
 class KeshaZeddSynthAudioProcessorEditor : public juce::AudioProcessorEditor,
@@ -414,7 +433,7 @@ private:
     juce::Slider formantMorphSlider;
     juce::Label formantMorphLabel;
 
-    // Filter ADSR & Curve Controls
+    // Filter ADSR & Curve
     juce::Slider filterAttackSlider, filterDecaySlider, filterSustainSlider, filterReleaseSlider, filterCurveSlider;
     juce::Label filterAttackLabel, filterDecayLabel, filterSustainLabel, filterReleaseLabel, filterCurveLabel;
 
@@ -448,7 +467,7 @@ private:
     juce::Slider subLevelSlider, subDriveSlider;
     juce::Label subLevelLabel, subDriveLabel;
 
-    // Settings
+    // Settings & Voicing
     juce::ComboBox playModeBox, chordModeBox, chordTypeBox, glideModeBox;
     juce::Label playModeLabel, chordModeLabel, chordTypeLabel, glideModeLabel;
     juce::ComboBox pitchDropActiveBox;
@@ -478,24 +497,16 @@ private:
 
     // Interactive 2D Pad (Trash vs Gloss)
     XYPad trashGlossPad;
-    juce::Label trashGlossLabel;
 
-    // Drop Master Wheel
-    juce::Slider macroDropSlider;
-    juce::Label macroDropLabel;
+    // Macro Controls
+    juce::Slider macroDropSlider, punchSlider, gritSlider, spaceSlider, widthSlider;
+    juce::Label macroDropLabel, punchLabel, gritLabel, spaceLabel, widthLabel;
 
-    // Macro Knobs
-    juce::Slider punchSlider, gritSlider, spaceSlider, widthSlider;
-    juce::Label punchLabel, gritLabel, spaceLabel, widthLabel;
-
-    // APVTS Attachments
-    using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
-    using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
-    using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
-
+    // Parameter Attachments
     std::unique_ptr<ComboBoxAttachment> presetAttachment;
     std::unique_ptr<SliderAttachment> masterVolAttachment;
-    std::unique_ptr<ButtonAttachment> zeddifyAttachment, autoMasterAttachment;
+    std::unique_ptr<ButtonAttachment> zeddifyAttachment;
+    std::unique_ptr<ButtonAttachment> autoMasterAttachment;
     std::unique_ptr<SliderAttachment> autoMasterIntensityAttachment;
 
     std::unique_ptr<SliderAttachment> osc1ShapeAttachment;
