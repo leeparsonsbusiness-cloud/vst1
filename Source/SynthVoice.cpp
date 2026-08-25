@@ -153,102 +153,99 @@ void SynthVoice::setHostInfo(double bpm)
 
 void SynthVoice::updateParameters(juce::AudioProcessorValueTreeState& apvts)
 {
-    osc1Shape = apvts.getRawParameterValue("osc1_shape")->load();
-    osc1Octave = static_cast<int>(apvts.getRawParameterValue("osc1_octave")->load());
-    osc1DetuneCents = apvts.getRawParameterValue("osc1_detune")->load();
-    unisonCount = static_cast<int>(apvts.getRawParameterValue("unison_count")->load());
-    unisonDetuneCents = apvts.getRawParameterValue("unison_detune")->load();
-    osc1Level = apvts.getRawParameterValue("osc1_level")->load();
+    auto getVal = [&](const char* id, float defaultVal) -> float {
+        if (auto* p = apvts.getRawParameterValue(id))
+            return p->load();
+        return defaultVal;
+    };
 
-    osc2Shape = apvts.getRawParameterValue("osc2_shape")->load();
-    osc2Octave = static_cast<int>(apvts.getRawParameterValue("osc2_octave")->load());
-    osc2DetuneCents = apvts.getRawParameterValue("osc2_detune")->load();
-    osc2Level = apvts.getRawParameterValue("osc2_level")->load();
-    fmDepth = apvts.getRawParameterValue("osc_fm_depth")->load();
-    oscSyncActive = apvts.getRawParameterValue("osc_sync")->load() > 0.5f;
+    osc1Shape = getVal("osc1_shape", 2.0f);
+    osc1Octave = static_cast<int>(getVal("osc1_octave", 0.0f));
+    osc1DetuneCents = getVal("osc1_detune", 0.0f);
+    unisonCount = static_cast<int>(getVal("unison_count", 7.0f));
+    unisonDetuneCents = getVal("unison_detune", 20.0f);
+    osc1Level = getVal("osc1_level", 0.85f);
+
+    osc2Shape = getVal("osc2_shape", 2.0f);
+    osc2Octave = static_cast<int>(getVal("osc2_octave", -1.0f));
+    osc2DetuneCents = getVal("osc2_detune", 5.0f);
+    osc2Level = getVal("osc2_level", 0.5f);
+    fmDepth = getVal("osc_fm_depth", 0.0f);
+    oscSyncActive = getVal("osc_sync", 0.0f) > 0.5f;
 
     // Analog Drift & Sound Stacker
-    if (apvts.getRawParameterValue("analog_drift") != nullptr)
-        analogDriftAmt = apvts.getRawParameterValue("analog_drift")->load();
-    if (apvts.getRawParameterValue("layer_b_type") != nullptr)
-        layerBType = static_cast<int>(apvts.getRawParameterValue("layer_b_type")->load());
-    if (apvts.getRawParameterValue("layer_b_mix") != nullptr)
-        layerBMix = apvts.getRawParameterValue("layer_b_mix")->load();
+    analogDriftAmt = getVal("analog_drift", 0.25f);
+    layerBType = static_cast<int>(getVal("layer_b_type", 0.0f));
+    layerBMix = getVal("layer_b_mix", 0.0f);
 
     // Transient selector
-    transientType = static_cast<int>(apvts.getRawParameterValue("transient_type")->load());
-    transientLevel = apvts.getRawParameterValue("transient_level")->load();
-    transientDecay = apvts.getRawParameterValue("transient_decay")->load();
+    transientType = static_cast<int>(getVal("transient_type", 0.0f));
+    transientLevel = getVal("transient_level", 0.0f);
+    transientDecay = getVal("transient_decay", 15.0f);
 
     // Sub Anchor parameters
-    subLevel = apvts.getRawParameterValue("sub_level")->load();
-    subOctave = static_cast<int>(apvts.getRawParameterValue("sub_octave")->load());
-    subWave = static_cast<int>(apvts.getRawParameterValue("sub_wave")->load());
-    subDrive = apvts.getRawParameterValue("sub_drive")->load();
+    subLevel = getVal("sub_level", 0.0f);
+    subOctave = static_cast<int>(getVal("sub_octave", -1.0f));
+    subWave = static_cast<int>(getVal("sub_wave", 0.0f));
+    subDrive = getVal("sub_drive", 0.0f);
 
-    baseCutoffHz = apvts.getRawParameterValue("filter_cutoff")->load();
-    filterResonance = apvts.getRawParameterValue("filter_res")->load();
-    filterDrive = apvts.getRawParameterValue("filter_drive")->load();
-    filterEnvAmount = apvts.getRawParameterValue("filter_env_amt")->load();
-    filterKeyTrack = apvts.getRawParameterValue("filter_key_track")->load();
-    filterLfoModAmount = apvts.getRawParameterValue("filter_lfo_mod")->load();
-    filterMode = static_cast<int>(apvts.getRawParameterValue("filter_mode")->load());
+    baseCutoffHz = getVal("filter_cutoff", 4500.0f);
+    filterResonance = getVal("filter_res", 0.2f);
+    filterDrive = getVal("filter_drive", 1.0f);
+    filterEnvAmount = getVal("filter_env_amt", 0.4f);
+    filterKeyTrack = getVal("filter_key_track", 0.0f);
+    filterLfoModAmount = getVal("filter_lfo_mod", 0.0f);
+    filterMode = static_cast<int>(getVal("filter_mode", 0.0f));
 
     // LFO parameters
-    lfo1Rate = static_cast<int>(apvts.getRawParameterValue("lfo1_rate")->load());
-    lfo1Wave = static_cast<int>(apvts.getRawParameterValue("lfo1_wave")->load());
-    lfo1ToCutoff = apvts.getRawParameterValue("lfo1_to_cutoff")->load();
-    lfo1ToShape = apvts.getRawParameterValue("lfo1_to_shape")->load();
+    lfo1Rate = static_cast<int>(getVal("lfo1_rate", 2.0f));
+    lfo1Wave = static_cast<int>(getVal("lfo1_wave", 0.0f));
+    lfo1ToCutoff = getVal("lfo1_to_cutoff", 0.0f);
+    lfo1ToShape = getVal("lfo1_to_shape", 0.0f);
 
-    lfo2Rate = static_cast<int>(apvts.getRawParameterValue("lfo2_rate")->load());
-    lfo2Wave = static_cast<int>(apvts.getRawParameterValue("lfo2_wave")->load());
-    lfo2ToPitch = apvts.getRawParameterValue("lfo2_to_pitch")->load();
-    lfo2ToPan = apvts.getRawParameterValue("lfo2_to_pan")->load();
-
-    // Envelopes curve shapers
-    ampDecayCurve = apvts.getRawParameterValue("amp_decay_curve")->load();
-    filterDecayCurve = apvts.getRawParameterValue("filter_decay_curve")->load();
+    lfo2Rate = static_cast<int>(getVal("lfo2_rate", 3.0f));
+    lfo2Wave = static_cast<int>(getVal("lfo2_wave", 0.0f));
+    lfo2ToPitch = getVal("lfo2_to_pitch", 0.0f);
+    lfo2ToPan = getVal("lfo2_to_pan", 0.0f);
 
     // Setup envelopes
-    float aAttack = apvts.getRawParameterValue("amp_attack")->load();
-    float aDecay = apvts.getRawParameterValue("amp_decay")->load();
-    float aSustain = apvts.getRawParameterValue("amp_sustain")->load();
-    float aRelease = apvts.getRawParameterValue("amp_release")->load();
+    float aAttack = getVal("amp_attack", 0.01f);
+    float aDecay = getVal("amp_decay", 0.4f);
+    float aSustain = getVal("amp_sustain", 0.8f);
+    float aRelease = getVal("amp_release", 0.5f);
 
-    float envDelay = (apvts.getRawParameterValue("env_delay") != nullptr) ? apvts.getRawParameterValue("env_delay")->load() : 0.0f;
-    float envHold = (apvts.getRawParameterValue("env_hold") != nullptr) ? apvts.getRawParameterValue("env_hold")->load() : 0.0f;
-    float decTension = (apvts.getRawParameterValue("env_dec_tension") != nullptr) ? apvts.getRawParameterValue("env_dec_tension")->load() : 1.0f;
-    float relTension = (apvts.getRawParameterValue("env_rel_tension") != nullptr) ? apvts.getRawParameterValue("env_rel_tension")->load() : 1.0f;
+    float envDelay = getVal("env_delay", 0.0f);
+    float envHold = getVal("env_hold", 0.0f);
+    float decTension = getVal("env_dec_tension", 1.0f);
+    float relTension = getVal("env_rel_tension", 1.0f);
 
     // Scale envelopes with macro punch
-    float punch = apvts.getRawParameterValue("macro_punch")->load();
+    float punch = getVal("macro_punch", 0.0f);
     aAttack = aAttack * (1.0f - punch * 0.85f);
     transientLevel = juce::jlimit(0.0f, 1.0f, transientLevel + punch * 0.5f);
 
     ampEnv.setParameters(aAttack, aDecay, aSustain, aRelease, decTension, envDelay, envHold, relTension);
 
-    float fAttack = apvts.getRawParameterValue("filter_attack")->load();
-    float fDecay = apvts.getRawParameterValue("filter_decay")->load();
-    float fSustain = apvts.getRawParameterValue("filter_sustain")->load();
-    float fRelease = apvts.getRawParameterValue("filter_release")->load();
+    float fAttack = getVal("filter_attack", 0.01f);
+    float fDecay = getVal("filter_decay", 0.3f);
+    float fSustain = getVal("filter_sustain", 0.5f);
+    float fRelease = getVal("filter_release", 0.4f);
     fAttack = fAttack * (1.0f - punch * 0.85f);
 
     filterEnv.setParameters(fAttack, fDecay, fSustain, fRelease, decTension, envDelay, envHold, relTension);
 
     // Pitch Drop parameters
-    pitchDropActive = apvts.getRawParameterValue("pitch_drop_active")->load() > 0.5f;
-    pitchDropOctaves = apvts.getRawParameterValue("pitch_drop_octaves")->load();
-    pitchDropDuration = apvts.getRawParameterValue("pitch_drop_time")->load() / 1000.0f;
+    pitchDropActive = getVal("pitch_drop_active", 0.0f) > 0.5f;
+    pitchDropOctaves = getVal("pitch_drop_octaves", 2.0f);
+    pitchDropDuration = getVal("pitch_drop_time", 50.0f) / 1000.0f;
 
     // Formant filter morph
-    formantMorph = apvts.getRawParameterValue("formant_morph")->load();
+    formantMorph = getVal("formant_morph", 0.0f);
 
     // Portamento & Glide parameters
-    glideTimeMs = apvts.getRawParameterValue("glide_time")->load();
-    if (apvts.getRawParameterValue("glide_mode") != nullptr)
-        glideMode = static_cast<int>(apvts.getRawParameterValue("glide_mode")->load());
-    if (apvts.getRawParameterValue("pitch_bend_range") != nullptr)
-        pitchBendRange = apvts.getRawParameterValue("pitch_bend_range")->load();
+    glideTimeMs = getVal("glide_time", 80.0f);
+    glideMode = static_cast<int>(getVal("glide_mode", 0.0f));
+    pitchBendRange = getVal("pitch_bend_range", 2.0f);
 
     // Map Ladder Filter mode
     if (filterMode < 4)

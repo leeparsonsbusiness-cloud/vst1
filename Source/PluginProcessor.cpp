@@ -122,12 +122,18 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     hookEngine.setBpm(bpm);
     counterMelodyEngine.setBpm(bpm);
 
+    auto getVal = [&](const char* id, float defaultVal) -> float {
+        if (auto* p = apvts.getRawParameterValue(id))
+            return p->load();
+        return defaultVal;
+    };
+
     // Update Zeddify Pattern Style
-    int zeddStyle = static_cast<int>(apvts.getRawParameterValue("zeddify_style")->load());
+    int zeddStyle = static_cast<int>(getVal("zeddify_style", 0.0f));
     zeddifyEngine.setPatternStyle(zeddStyle);
 
     // 1. FL Studio Time Shift / Gate
-    float timeShiftMs = (apvts.getRawParameterValue("fl_time_shift") != nullptr) ? apvts.getRawParameterValue("fl_time_shift")->load() : 0.0f;
+    float timeShiftMs = getVal("fl_time_shift", 0.0f);
     int shiftSamples = static_cast<int>((timeShiftMs * 0.001f) * getSampleRate());
     if (shiftSamples > 0)
     {
@@ -141,50 +147,50 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     }
 
     // 2. Smart Key & Scale Lock + Easy Key Remapper + Chord Strummer
-    int scaleRoot = static_cast<int>(apvts.getRawParameterValue("scale_root")->load());
-    int scaleType = static_cast<int>(apvts.getRawParameterValue("scale_type")->load());
-    float strumMs = apvts.getRawParameterValue("chord_strum_ms")->load();
-    bool easyKeyActive = apvts.getRawParameterValue("easy_key_active")->load() > 0.5f;
+    int scaleRoot = static_cast<int>(getVal("scale_root", 0.0f));
+    int scaleType = static_cast<int>(getVal("scale_type", 0.0f));
+    float strumMs = getVal("chord_strum_ms", 0.0f);
+    bool easyKeyActive = getVal("easy_key_active", 0.0f) > 0.5f;
     scaleManager.processMidi(midiMessages, scaleRoot, scaleType, strumMs, easyKeyActive, getSampleRate(), buffer.getNumSamples());
 
     // 3. One-Finger Chord Progression Engine
-    int chordProg = static_cast<int>(apvts.getRawParameterValue("chord_prog_preset")->load());
+    int chordProg = static_cast<int>(getVal("chord_prog_preset", 0.0f));
     chordProgEngine.processMidi(midiMessages, chordProg, scaleRoot, scaleType, buffer.getNumSamples());
 
     // 4. Topline Hook Generator Engine
-    bool hookActive = apvts.getRawParameterValue("hook_generator_active")->load() > 0.5f;
+    bool hookActive = getVal("hook_generator_active", 0.0f) > 0.5f;
     hookEngine.processMidi(midiMessages, hookActive, scaleRoot, scaleType, buffer.getNumSamples());
 
     // 5. Counter-Melody / Answer Fill Engine
-    bool counterActive = apvts.getRawParameterValue("counter_melody_active")->load() > 0.5f;
+    bool counterActive = getVal("counter_melody_active", 0.0f) > 0.5f;
     counterMelodyEngine.processMidi(midiMessages, counterActive, scaleRoot, scaleType, buffer.getNumSamples());
 
     // 6. Real-Time Auto-Harmonizer
-    int harmMode = static_cast<int>(apvts.getRawParameterValue("harmonizer_mode")->load());
+    int harmMode = static_cast<int>(getVal("harmonizer_mode", 0.0f));
     harmonizerEngine.processMidi(midiMessages, harmMode, scaleRoot, scaleType);
 
     // 7. Auto-Bassline Follower Engine
-    int autoBassMode = static_cast<int>(apvts.getRawParameterValue("auto_bass_mode")->load());
+    int autoBassMode = static_cast<int>(getVal("auto_bass_mode", 0.0f));
     autoBassEngine.processMidi(midiMessages, autoBassMode, buffer.getNumSamples());
 
     // 8. Process Zeddify Algorithmic Melody Engine on incoming MIDI
-    bool zeddifyActive = apvts.getRawParameterValue("zeddify_active")->load() > 0.5f;
+    bool zeddifyActive = getVal("zeddify_active", 0.0f) > 0.5f;
     zeddifyEngine.processMidiBlock(midiMessages, zeddifyActive, buffer.getNumSamples());
 
     // 9. Process Arpeggiator on MIDI
-    int arpMode = static_cast<int>(apvts.getRawParameterValue("arp_mode")->load());
+    int arpMode = static_cast<int>(getVal("arp_mode", 0.0f));
     arpeggiator.setMode(arpMode);
     arpeggiator.processMidiBlock(midiMessages, getSampleRate(), bpm, buffer.getNumSamples());
 
     // 10. Groove Feel Humanizer
-    float humanizeAmt = apvts.getRawParameterValue("humanize_amount")->load();
+    float humanizeAmt = getVal("humanize_amount", 0.0f);
     humanizerEngine.processMidi(midiMessages, humanizeAmt, getSampleRate(), buffer.getNumSamples());
 
-    int playMode = static_cast<int>(apvts.getRawParameterValue("play_mode")->load());
-    float glideTime = apvts.getRawParameterValue("glide_time")->load();
-    bool chordMode = apvts.getRawParameterValue("chord_mode")->load() > 0.5f;
-    int chordType = static_cast<int>(apvts.getRawParameterValue("chord_type")->load());
-    bool cutSelf = (apvts.getRawParameterValue("fl_cut_self") != nullptr) ? (apvts.getRawParameterValue("fl_cut_self")->load() > 0.5f) : false;
+    int playMode = static_cast<int>(getVal("play_mode", 0.0f));
+    float glideTime = getVal("glide_time", 80.0f);
+    bool chordMode = getVal("chord_mode", 0.0f) > 0.5f;
+    int chordType = static_cast<int>(getVal("chord_type", 0.0f));
+    bool cutSelf = getVal("fl_cut_self", 0.0f) > 0.5f;
 
     // 11. Smart Chord Stacking
     juce::MidiBuffer processedMidi;
@@ -376,8 +382,8 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     }
 
     // 13. Check Riser Pitch Bend Offset
-    bool riserActive = apvts.getRawParameterValue("riser_active")->load() > 0.5f;
-    float riserProgress = apvts.getRawParameterValue("riser_progress")->load();
+    bool riserActive = getVal("riser_active", 0.0f) > 0.5f;
+    float riserProgress = getVal("riser_progress", 0.0f);
     if (riserActive && riserProgress > 0.001f)
     {
         float riserSemitones = riserEngine.getPitchOffsetSemitones(riserProgress);
@@ -404,7 +410,7 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     postFX.process(buffer, apvts, timeInSeconds, bpm, ppqPosition, isPlaying);
 
     // 16. Mix Sub-Oscillator (Channel 2 of tempBuffer) back directly into output buffer
-    float subLevel = apvts.getRawParameterValue("sub_level")->load();
+    float subLevel = getVal("sub_level", 0.0f);
     if (subLevel > 0.001f)
     {
         buffer.addFrom(0, 0, tempBuffer, 2, 0, numSamples);
@@ -416,31 +422,31 @@ void KeshaZeddSynthAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer
     expandedFX.process(buffer, apvts);
 
     // 18. "Glitter Cloud" Granular Shimmer Reverb
-    float glitterMix = apvts.getRawParameterValue("glitter_mix")->load();
-    float grainSize = apvts.getRawParameterValue("glitter_grain_size")->load();
+    float glitterMix = getVal("glitter_mix", 0.0f);
+    float grainSize = getVal("glitter_grain_size", 45.0f);
     glitterReverb.process(buffer, glitterMix, grainSize);
 
     // 19. FL Studio Echo Delay & Fat Mode Engine
-    float echoFeed = (apvts.getRawParameterValue("fl_echo_feed") != nullptr) ? apvts.getRawParameterValue("fl_echo_feed")->load() : 0.0f;
-    float echoTime = (apvts.getRawParameterValue("fl_echo_time") != nullptr) ? apvts.getRawParameterValue("fl_echo_time")->load() : 250.0f;
-    float echoPan = (apvts.getRawParameterValue("fl_echo_pan") != nullptr) ? apvts.getRawParameterValue("fl_echo_pan")->load() : 0.0f;
-    float echoPitch = (apvts.getRawParameterValue("fl_echo_pitch") != nullptr) ? apvts.getRawParameterValue("fl_echo_pitch")->load() : 0.0f;
-    int echoCount = (apvts.getRawParameterValue("fl_echo_count") != nullptr) ? static_cast<int>(apvts.getRawParameterValue("fl_echo_count")->load()) : 0;
-    bool pingPong = (apvts.getRawParameterValue("fl_echo_pingpong") != nullptr) ? (apvts.getRawParameterValue("fl_echo_pingpong")->load() > 0.5f) : false;
-    bool fatMode = (apvts.getRawParameterValue("fl_echo_fat") != nullptr) ? (apvts.getRawParameterValue("fl_echo_fat")->load() > 0.5f) : false;
+    float echoFeed = getVal("fl_echo_feed", 0.0f);
+    float echoTime = getVal("fl_echo_time", 250.0f);
+    float echoPan = getVal("fl_echo_pan", 0.0f);
+    float echoPitch = getVal("fl_echo_pitch", 0.0f);
+    int echoCount = static_cast<int>(getVal("fl_echo_count", 0.0f));
+    bool pingPong = getVal("fl_echo_pingpong", 0.0f) > 0.5f;
+    bool fatMode = getVal("fl_echo_fat", 0.0f) > 0.5f;
 
     flEchoDelay.process(buffer, echoFeed, echoTime, echoPan, echoPitch, echoCount, pingPong, fatMode);
 
     // 20. Producer Flavor Processing
-    int flavorIdx = static_cast<int>(apvts.getRawParameterValue("producer_flavor")->load());
-    float flavorIntensity = apvts.getRawParameterValue("producer_flavor_intensity")->load();
+    int flavorIdx = static_cast<int>(getVal("producer_flavor", 0.0f));
+    float flavorIntensity = getVal("producer_flavor_intensity", 0.0f);
     producerFlavor.process(buffer, flavorIdx, flavorIntensity);
 
     // 21. The Riser / Buildup Processing
     riserEngine.process(buffer, riserActive, riserProgress, bpm);
 
     // 22. Momentary Glitch & Tape-Stop Performance Ribbon
-    int glitchMode = static_cast<int>(apvts.getRawParameterValue("glitch_mode")->load());
+    int glitchMode = static_cast<int>(getVal("glitch_mode", 0.0f));
     glitchEngine.setMode(glitchMode);
     glitchEngine.process(buffer);
 
