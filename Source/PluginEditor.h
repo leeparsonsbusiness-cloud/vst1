@@ -424,6 +424,8 @@ public:
         zeddAnthemMenu.addItem(56, "Beautiful Now - Rolling Progressive Bass");
         zeddAnthemMenu.addItem(57, "Beautiful Now - Cinematic Emotional Pad");
         zeddAnthemMenu.addItem(58, "Beautiful Now - Emotional Breakdown Piano");
+        zeddAnthemMenu.addItem(59, "Beautiful Now - Stadium Punch Kick");
+        zeddAnthemMenu.addItem(60, "Beautiful Now - White Noise Tension Sweep");
         menu.addSubMenu("09_Zedd 'Beautiful Now' Suite", zeddAnthemMenu);
         
         // User Presets
@@ -472,7 +474,7 @@ public:
             {
                 menuShowing = false;
                 if (result == 0) return;
-                if (result >= 1 && result <= 58)
+                if (result >= 1 && result <= 60)
                 {
                     if (onPresetSelected)
                         onPresetSelected(result - 1);

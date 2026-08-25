@@ -1166,6 +1166,42 @@ PresetManager::PresetManager()
     p.fxReverbMix = 0.30f;
     presets.push_back(p);
 
+    // 59. Beautiful Now - Stadium Punch Kick (Sub Synth)
+    p = createDefaultPreset("Beautiful Now - Stadium Punch Kick");
+    p.osc1Shape = 0.0f; // Sine
+    p.osc1Octave = -2;
+    p.osc1Level = 1.0f;
+    p.pitchDropActive = 1;
+    p.pitchDropOctaves = 2.0f;
+    p.pitchDropTime = 40.0f;
+    p.subWave = 0;
+    p.subOctave = -2;
+    p.subLevel = 1.0f;
+    p.subDrive = 0.70f;
+    p.filterCutoff = 250.0f;
+    p.monoMakerActive = 1;
+    p.monoMakerFreq = 160.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.32f;
+    p.ampSustain = 0.0f;
+    p.ampRelease = 0.05f;
+    presets.push_back(p);
+
+    // 60. Beautiful Now - White Noise Tension Sweep
+    p = createDefaultPreset("Beautiful Now - White Noise Tension Sweep");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 1;
+    p.unisonCount = 7;
+    p.unisonDetune = 50.0f;
+    p.filterMode = 3; // Highpass
+    p.filterCutoff = 3500.0f;
+    p.filterRes = 0.45f;
+    p.ampAttack = 2.0f;
+    p.ampRelease = 1.5f;
+    p.fxReverbDecay = 0.95f;
+    p.fxReverbMix = 0.75f;
+    presets.push_back(p);
+
     // Populate name array
     for (const auto& preset : presets)
         presetNames.push_back(preset.name);
