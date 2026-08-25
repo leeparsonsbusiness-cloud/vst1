@@ -48,12 +48,14 @@ private:
     bool isDown = false;
 };
 
-// Drag-and-Drop MIDI Export Handle Component (for Zeddify Melodies or Chords)
+// Drag-and-Drop MIDI Export Handle Component (Zeddify, Chords, Hook, Vault)
 class DragMidiButton : public juce::Component
 {
 public:
-    DragMidiButton(KeshaZeddSynthAudioProcessor& p, bool forChords = false) 
-        : processor(p), isChordExport(forChords) {}
+    enum ExportType { Zeddify = 0, Chords = 1, Hook = 2, Vault = 3 };
+
+    DragMidiButton(KeshaZeddSynthAudioProcessor& p, ExportType type = Zeddify) 
+        : processor(p), exportType(type) {}
     ~DragMidiButton() override = default;
 
     void paint(juce::Graphics& g) override
@@ -64,16 +66,25 @@ public:
         g.setColour(bgColour);
         g.fillRoundedRectangle(bounds, 4.0f);
 
-        juce::Colour borderCol = isChordExport ? (isHovered ? juce::Colour(0xff00d4ff) : juce::Colour(0xff2b4555))
-                                              : (isHovered ? juce::Colour(0xffff9900) : juce::Colour(0xff3a3e52));
+        juce::Colour borderCol = (exportType == Chords) ? (isHovered ? juce::Colour(0xff00d4ff) : juce::Colour(0xff2b4555))
+                               : (exportType == Hook)   ? (isHovered ? juce::Colour(0xffd400ff) : juce::Colour(0xff452b55))
+                               : (exportType == Vault)  ? (isHovered ? juce::Colour(0xff00ffaa) : juce::Colour(0xff2b5545))
+                                                        : (isHovered ? juce::Colour(0xffff9900) : juce::Colour(0xff3a3e52));
         g.setColour(borderCol);
         g.drawRoundedRectangle(bounds, 4.0f, 1.2f);
 
-        juce::Colour textCol = isChordExport ? (isHovered ? juce::Colour(0xff88eaff) : juce::Colour(0xff9ec7d8))
-                                             : (isHovered ? juce::Colour(0xffffaa33) : juce::Colour(0xffc5cad8));
+        juce::String labelStr = (exportType == Chords) ? "CHORDS"
+                              : (exportType == Hook)   ? "HOOK MIDI"
+                              : (exportType == Vault)  ? "VAULT MIDI"
+                                                       : "EXPORT";
+
+        juce::Colour textCol = (exportType == Chords) ? (isHovered ? juce::Colour(0xff88eaff) : juce::Colour(0xff9ec7d8))
+                             : (exportType == Hook)   ? (isHovered ? juce::Colour(0xfff0b8ff) : juce::Colour(0xffc59ed8))
+                             : (exportType == Vault)  ? (isHovered ? juce::Colour(0xff88ffcc) : juce::Colour(0xff9ed8bf))
+                                                      : (isHovered ? juce::Colour(0xffffaa33) : juce::Colour(0xffc5cad8));
         g.setColour(textCol);
-        g.setFont(juce::FontOptions(9.5f, juce::Font::bold));
-        g.drawText(isChordExport ? "CHORD MIDI" : "EXPORT MIDI", bounds, juce::Justification::centred, false);
+        g.setFont(juce::FontOptions(9.0f, juce::Font::bold));
+        g.drawText(labelStr, bounds, juce::Justification::centred, false);
     }
 
     void mouseEnter(const juce::MouseEvent&) override { isHovered = true; repaint(); }
@@ -81,29 +92,42 @@ public:
 
     void mouseDrag(const juce::MouseEvent&) override
     {
-        if (isChordExport)
+        int root = static_cast<int>(processor.getAPVTS().getRawParameterValue("scale_root")->load());
+        int scale = static_cast<int>(processor.getAPVTS().getRawParameterValue("scale_type")->load());
+
+        if (exportType == Chords)
         {
             juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("chord_progression.mid");
             int prog = static_cast<int>(processor.getAPVTS().getRawParameterValue("chord_prog_preset")->load());
-            int root = static_cast<int>(processor.getAPVTS().getRawParameterValue("scale_root")->load());
             if (processor.getChordProgEngine().exportProgressionMidi(prog, root, tempFile))
-            {
                 juce::DragAndDropContainer::performExternalDragDropOfFiles({ tempFile.getFullPathName() }, false, this);
-            }
+        }
+        else if (exportType == Hook)
+        {
+            juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("topline_hook.mid");
+            if (processor.getHookEngine().exportHookMidi(root, scale, tempFile))
+                juce::DragAndDropContainer::performExternalDragDropOfFiles({ tempFile.getFullPathName() }, false, this);
+        }
+        else if (exportType == Vault)
+        {
+            juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("vault_melody.mid");
+            if (processor.getMidiVault().exportItemToMidi(vaultIndex, root, scale, tempFile))
+                juce::DragAndDropContainer::performExternalDragDropOfFiles({ tempFile.getFullPathName() }, false, this);
         }
         else
         {
             juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("zeddify_riff.mid");
             if (processor.getZeddifyEngine().exportToMidiFile(60, tempFile))
-            {
                 juce::DragAndDropContainer::performExternalDragDropOfFiles({ tempFile.getFullPathName() }, false, this);
-            }
         }
     }
 
+    void setVaultIndex(int idx) { vaultIndex = idx; }
+
 private:
     KeshaZeddSynthAudioProcessor& processor;
-    bool isChordExport = false;
+    ExportType exportType = Zeddify;
+    int vaultIndex = 0;
     bool isHovered = false;
 };
 
@@ -398,8 +422,11 @@ private:
     juce::ToggleButton zeddifyButton;
     juce::ComboBox zeddifyStyleBox;
     juce::TextButton mutateButton;
+    
     DragMidiButton dragMidiButton;
     DragMidiButton dragChordButton;
+    DragMidiButton dragHookButton;
+    DragMidiButton dragVaultButton;
 
     // Master Volume, Auto-Master & Theme
     juce::Slider masterVolSlider;
@@ -438,7 +465,7 @@ private:
     juce::Label layerBTypeLabel;
 
     // ----------------------------------------------------
-    // SECTION 2: SONGWRITING & PERFORMANCE (Center Bay)
+    // SECTION 2: SONGWRITING & MELODY POWER (Center Bay)
     // ----------------------------------------------------
     juce::ToggleButton slideToggle;
     juce::Slider glideTimeSlider;
@@ -450,6 +477,16 @@ private:
     juce::Label harmonizerLabel;
     juce::ComboBox autoBassBox;
     juce::Label autoBassLabel;
+
+    // Hook Generator & MIDI Vault Controls
+    juce::ToggleButton hookGenToggle;
+    juce::ComboBox hookMoodBox;
+    juce::TextButton generateHookButton;
+    juce::ComboBox midiVaultBox;
+    juce::Label midiVaultLabel;
+
+    juce::ToggleButton easyKeyToggle;
+    juce::ToggleButton counterMelodyToggle;
 
     juce::ComboBox producerFlavorBox;
     juce::Label producerFlavorLabel;
@@ -477,6 +514,8 @@ private:
     juce::Label macroDropLabel;
     juce::Slider punchSlider;
     juce::Label punchLabel;
+    juce::Slider humanizeSlider;
+    juce::Label humanizeLabel;
 
     juce::ComboBox scaleRootBox;
     juce::Label scaleRootLabel;
@@ -531,6 +570,12 @@ private:
     std::unique_ptr<ComboBoxAttachment> chordProgAttachment;
     std::unique_ptr<ComboBoxAttachment> harmonizerAttachment;
     std::unique_ptr<ComboBoxAttachment> autoBassAttachment;
+    std::unique_ptr<ButtonAttachment> hookGenAttachment;
+    std::unique_ptr<ComboBoxAttachment> hookMoodAttachment;
+    std::unique_ptr<ButtonAttachment> easyKeyAttachment;
+    std::unique_ptr<ButtonAttachment> counterMelodyAttachment;
+    std::unique_ptr<SliderAttachment> humanizeAttachment;
+
     std::unique_ptr<ComboBoxAttachment> producerFlavorAttachment;
     std::unique_ptr<SliderAttachment> producerFlavorIntensityAttachment;
     std::unique_ptr<ButtonAttachment> riserAttachment;

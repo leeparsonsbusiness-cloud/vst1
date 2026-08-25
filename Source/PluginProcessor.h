@@ -19,6 +19,10 @@
 #include "AutoBassEngine.h"
 #include "GlitchPerformanceEngine.h"
 #include "GlitterCloudReverb.h"
+#include "HookGeneratorEngine.h"
+#include "CounterMelodyEngine.h"
+#include "HumanizerEngine.h"
+#include "MidiVault.h"
 
 class KeshaZeddSynthAudioProcessor : public juce::AudioProcessor
 {
@@ -67,6 +71,10 @@ public:
     AutoBassEngine& getAutoBassEngine() { return autoBassEngine; }
     GlitchPerformanceEngine& getGlitchEngine() { return glitchEngine; }
     GlitterCloudReverb& getGlitterReverb() { return glitterReverb; }
+    HookGeneratorEngine& getHookEngine() { return hookEngine; }
+    CounterMelodyEngine& getCounterMelodyEngine() { return counterMelodyEngine; }
+    HumanizerEngine& getHumanizerEngine() { return humanizerEngine; }
+    MidiVault& getMidiVault() { return midiVault; }
     
     int getActiveVoiceCount() const { return activeVoiceCount.load(); }
 
@@ -98,6 +106,10 @@ private:
     AutoBassEngine autoBassEngine;
     GlitchPerformanceEngine glitchEngine;
     GlitterCloudReverb glitterReverb;
+    HookGeneratorEngine hookEngine;
+    CounterMelodyEngine counterMelodyEngine;
+    HumanizerEngine humanizerEngine;
+    MidiVault midiVault;
 
     int currentPresetIndex = 0;
     std::atomic<int> activeVoiceCount { 0 };
