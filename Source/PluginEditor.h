@@ -196,8 +196,8 @@ public:
         g.drawRoundedRectangle(bounds, 4.0f, 1.2f);
 
         juce::String labelStr = (exportType == Chords) ? "CHORDS"
-                              : (exportType == Hook)   ? "HOOK MIDI"
-                              : (exportType == Vault)  ? "VAULT MIDI"
+                              : (exportType == Hook)   ? "HOOK"
+                              : (exportType == Vault)  ? "VAULT"
                                                        : "EXPORT";
 
         juce::Colour textCol = (exportType == Chords) ? (isHovered ? juce::Colour(0xff88eaff) : juce::Colour(0xff9ec7d8))
@@ -701,6 +701,11 @@ private:
     juce::Slider glitterGrainSlider;
     juce::Label glitterGrainLabel;
 
+    juce::ComboBox producerFlavorBox;
+    juce::Label producerFlavorLabel;
+    juce::Slider producerFlavorIntensitySlider;
+    juce::Label producerFlavorIntensityLabel;
+
     juce::ToggleButton pumpToggle;
     juce::ToggleButton monoMakerToggle;
 
@@ -711,6 +716,8 @@ private:
     std::unique_ptr<ComboBoxAttachment> zeddifyStyleAttachment;
     std::unique_ptr<ButtonAttachment> autoMasterAttachment;
     std::unique_ptr<ComboBoxAttachment> themeAttachment;
+    std::unique_ptr<ComboBoxAttachment> producerFlavorAttachment;
+    std::unique_ptr<SliderAttachment> producerFlavorIntensityAttachment;
 
     std::unique_ptr<SliderAttachment> osc1ShapeAttachment;
     std::unique_ptr<ComboBoxAttachment> osc1OctaveAttachment;

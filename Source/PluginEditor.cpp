@@ -329,7 +329,7 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
       envDisplay(p)
 {
     setLookAndFeel(&lookAndFeel);
-    setSize(860, 560);
+    setSize(980, 560);
 
     // 1. Preset Dropdown & Header Buttons
     setupComboBox(presetBox, presetLabel, "PRESET");
@@ -370,12 +370,14 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
     };
 
     savePresetButton.setButtonText("SAVE");
-    savePresetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1d202b));
+    savePresetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e2820));
     addAndMakeVisible(savePresetButton);
-    savePresetButton.onClick = [this]() { showSavePresetDialog(); };
+    savePresetButton.onClick = [this]() {
+        showSavePresetDialog();
+    };
 
     loadPresetButton.setButtonText("LOAD");
-    loadPresetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1d202b));
+    loadPresetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff1e2230));
     addAndMakeVisible(loadPresetButton);
     loadPresetButton.onClick = [this]() {
         auto chooser = std::make_shared<juce::FileChooser>("Load User Preset JSON...",
@@ -430,6 +432,14 @@ KeshaZeddSynthAudioProcessorEditor::KeshaZeddSynthAudioProcessorEditor(KeshaZedd
         repaint();
     };
     themeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "ui_theme", themeBox);
+
+    // Producer Flavor Suite
+    setupComboBox(producerFlavorBox, producerFlavorLabel, "PRODUCER FLAVOR");
+    producerFlavorBox.addItemList({"Neutral Clean", "Kesha Glitter", "Max Martin Polish", "Zedd Complextro", "Hyperpop Trash"}, 1);
+    producerFlavorAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.getAPVTS(), "producer_flavor", producerFlavorBox);
+
+    setupSlider(producerFlavorIntensitySlider, producerFlavorIntensityLabel, "FLAVOR MIX");
+    producerFlavorIntensityAttachment = std::make_unique<SliderAttachment>(audioProcessor.getAPVTS(), "producer_flavor_intensity", producerFlavorIntensitySlider);
 
     addAndMakeVisible(dragMidiButton);
     addAndMakeVisible(dragChordButton);
@@ -813,35 +823,35 @@ void KeshaZeddSynthAudioProcessorEditor::paint(juce::Graphics& g)
         g.drawText(title.toUpperCase(), sx + 20, sy + 6, sw - 30, 18, juce::Justification::centredLeft);
     };
 
-    drawSection(16, 118, 268, 430, "Sound Engine & Hybrid", lookAndFeel.getAccentColour(0));
-    drawSection(292, 118, 276, 430, "FL Envelope & Echo Suite", lookAndFeel.getAccentColour(1));
-    drawSection(576, 118, 268, 430, "Effects & Space", lookAndFeel.getAccentColour(2));
+    drawSection(16, 118, 304, 430, "Sound Engine & Hybrid", lookAndFeel.getAccentColour(0));
+    drawSection(332, 118, 316, 430, "FL Envelope & Echo Suite", lookAndFeel.getAccentColour(1));
+    drawSection(660, 118, 304, 430, "Effects & Producer Suite", lookAndFeel.getAccentColour(2));
 }
 
 void KeshaZeddSynthAudioProcessorEditor::resized()
 {
     // ----------------------------------------------------
-    // Header Bar Layout (y: 0 to 46)
+    // Header Bar Layout (y: 0 to 46) - Clean & Wide
     // ----------------------------------------------------
-    prevPresetButton.setBounds(116, 11, 18, 24);
-    presetBox.setBounds(136, 11, 155, 24);
-    nextPresetButton.setBounds(293, 11, 18, 24);
+    prevPresetButton.setBounds(116, 11, 20, 24);
+    presetBox.setBounds(138, 11, 156, 24);
+    nextPresetButton.setBounds(296, 11, 20, 24);
 
-    savePresetButton.setBounds(313, 11, 32, 24);
-    loadPresetButton.setBounds(347, 11, 32, 24);
-    diceButton.setBounds(381, 11, 32, 24);
+    savePresetButton.setBounds(320, 11, 40, 24);
+    loadPresetButton.setBounds(362, 11, 40, 24);
+    diceButton.setBounds(404, 11, 38, 24);
 
-    zeddifyButton.setBounds(416, 11, 52, 24);
-    zeddifyStyleBox.setBounds(470, 11, 64, 24);
-    mutateButton.setBounds(536, 11, 38, 24);
+    zeddifyButton.setBounds(446, 11, 64, 24);
+    zeddifyStyleBox.setBounds(512, 11, 84, 24);
+    mutateButton.setBounds(598, 11, 50, 24);
 
-    autoMasterButton.setBounds(576, 11, 62, 24);
-    themeBox.setBounds(640, 11, 56, 24);
+    autoMasterButton.setBounds(652, 11, 92, 24);
+    themeBox.setBounds(746, 11, 74, 24);
     
-    dragMidiButton.setBounds(698, 11, 40, 24);
-    dragChordButton.setBounds(740, 11, 46, 24);
-    dragHookButton.setBounds(788, 11, 44, 24);
-    dragVaultButton.setBounds(834, 11, 44, 24);
+    dragMidiButton.setBounds(824, 11, 36, 24);
+    dragChordButton.setBounds(862, 11, 36, 24);
+    dragHookButton.setBounds(900, 11, 36, 24);
+    dragVaultButton.setBounds(938, 11, 36, 24);
 
     // ----------------------------------------------------
     // Central OLED Screen (y: 54 to 110)
@@ -849,160 +859,172 @@ void KeshaZeddSynthAudioProcessorEditor::resized()
     audioProcessor.getVisualizer().setBounds(18, 54, getWidth() - 36, 56);
 
     // ----------------------------------------------------
-    // Section 1: Sound Engine & Hybrid Layer (x: 16, y: 118, w: 268, h: 430)
+    // Section 1: Sound Engine & Hybrid Layer (x: 16, y: 118, w: 304, h: 430)
     // ----------------------------------------------------
     // Row 1 (y: 145)
-    osc1ShapeLabel.setBounds(24, 142, 74, 13);
-    osc1ShapeSlider.setBounds(24, 155, 74, 54);
+    osc1ShapeLabel.setBounds(24, 142, 85, 13);
+    osc1ShapeSlider.setBounds(24, 155, 85, 54);
 
-    unisonDetuneLabel.setBounds(112, 142, 74, 13);
-    unisonDetuneSlider.setBounds(112, 155, 74, 54);
+    unisonDetuneLabel.setBounds(124, 142, 85, 13);
+    unisonDetuneSlider.setBounds(124, 155, 85, 54);
 
-    subLevelLabel.setBounds(200, 142, 74, 13);
-    subLevelSlider.setBounds(200, 155, 74, 54);
+    subLevelLabel.setBounds(224, 142, 85, 13);
+    subLevelSlider.setBounds(224, 155, 85, 54);
 
     // Row 2 (y: 225)
-    filterCutoffLabel.setBounds(24, 222, 74, 13);
-    filterCutoffSlider.setBounds(24, 235, 74, 54);
+    filterCutoffLabel.setBounds(24, 222, 85, 13);
+    filterCutoffSlider.setBounds(24, 235, 85, 54);
 
-    filterResLabel.setBounds(112, 222, 74, 13);
-    filterResSlider.setBounds(112, 235, 74, 54);
+    filterResLabel.setBounds(124, 222, 85, 13);
+    filterResSlider.setBounds(124, 235, 85, 54);
 
-    layerBMixLabel.setBounds(200, 222, 74, 13);
-    layerBMixSlider.setBounds(200, 235, 74, 54);
+    layerBMixLabel.setBounds(224, 222, 85, 13);
+    layerBMixSlider.setBounds(224, 235, 85, 54);
 
     // Row 3 Dropdowns (y: 310)
-    osc1OctaveLabel.setBounds(26, 308, 110, 13);
-    osc1OctaveBox.setBounds(26, 322, 110, 22);
+    osc1OctaveLabel.setBounds(26, 308, 130, 13);
+    osc1OctaveBox.setBounds(26, 322, 130, 22);
 
-    filterModeLabel.setBounds(150, 308, 120, 13);
-    filterModeBox.setBounds(150, 322, 120, 22);
+    filterModeLabel.setBounds(168, 308, 140, 13);
+    filterModeBox.setBounds(168, 322, 140, 22);
 
-    layerBTypeLabel.setBounds(26, 360, 244, 13);
-    layerBTypeBox.setBounds(26, 375, 244, 22);
+    layerBTypeLabel.setBounds(26, 360, 282, 13);
+    layerBTypeBox.setBounds(26, 375, 282, 22);
 
     // ----------------------------------------------------
-    // Section 2: FL Studio AHDSR & Echo Suite (x: 292, y: 118, w: 276, h: 430)
+    // Section 2: FL Studio AHDSR & Echo Suite (x: 332, y: 118, w: 316, h: 430)
     // ----------------------------------------------------
     // FL Envelope Graph Screen (y: 136)
-    envDisplay.setBounds(300, 136, 260, 48);
+    envDisplay.setBounds(340, 136, 300, 48);
 
     // Row 1 AHDSR Knobs (y: 190)
-    envDelayLabel.setBounds(300, 188, 42, 12);
-    envDelaySlider.setBounds(300, 200, 42, 44);
+    envDelayLabel.setBounds(340, 188, 48, 12);
+    envDelaySlider.setBounds(340, 200, 48, 44);
 
-    ampAttackLabel.setBounds(344, 188, 42, 12);
-    ampAttackSlider.setBounds(344, 200, 42, 44);
+    ampAttackLabel.setBounds(390, 188, 48, 12);
+    ampAttackSlider.setBounds(390, 200, 48, 44);
 
-    envHoldLabel.setBounds(388, 188, 42, 12);
-    envHoldSlider.setBounds(388, 200, 42, 44);
+    envHoldLabel.setBounds(440, 188, 48, 12);
+    envHoldSlider.setBounds(440, 200, 48, 44);
 
-    ampDecayLabel.setBounds(432, 188, 42, 12);
-    ampDecaySlider.setBounds(432, 200, 42, 44);
+    ampDecayLabel.setBounds(490, 188, 48, 12);
+    ampDecaySlider.setBounds(490, 200, 48, 44);
 
-    ampSustainLabel.setBounds(476, 188, 42, 12);
-    ampSustainSlider.setBounds(476, 200, 42, 44);
+    ampSustainLabel.setBounds(540, 188, 48, 12);
+    ampSustainSlider.setBounds(540, 200, 48, 44);
 
-    ampReleaseLabel.setBounds(518, 188, 42, 12);
-    ampReleaseSlider.setBounds(518, 200, 42, 44);
+    ampReleaseLabel.setBounds(590, 188, 48, 12);
+    ampReleaseSlider.setBounds(590, 200, 48, 44);
 
     // Row 2 Tension & Echo Knobs (y: 248)
-    envDecTensionLabel.setBounds(300, 246, 50, 12);
-    envDecTensionSlider.setBounds(300, 258, 50, 44);
+    envDecTensionLabel.setBounds(340, 246, 56, 12);
+    envDecTensionSlider.setBounds(340, 258, 56, 44);
 
-    envRelTensionLabel.setBounds(352, 246, 50, 12);
-    envRelTensionSlider.setBounds(352, 258, 50, 44);
+    envRelTensionLabel.setBounds(400, 246, 56, 12);
+    envRelTensionSlider.setBounds(400, 258, 56, 44);
 
-    echoFeedLabel.setBounds(404, 246, 50, 12);
-    echoFeedSlider.setBounds(404, 258, 50, 44);
+    echoFeedLabel.setBounds(460, 246, 56, 12);
+    echoFeedSlider.setBounds(460, 258, 56, 44);
 
-    echoTimeLabel.setBounds(456, 246, 50, 12);
-    echoTimeSlider.setBounds(456, 258, 50, 44);
+    echoTimeLabel.setBounds(520, 246, 56, 12);
+    echoTimeSlider.setBounds(520, 258, 56, 44);
 
-    echoPitchLabel.setBounds(508, 246, 50, 12);
-    echoPitchSlider.setBounds(508, 258, 50, 44);
+    echoPitchLabel.setBounds(580, 246, 56, 12);
+    echoPitchSlider.setBounds(580, 258, 56, 44);
 
     // Row 3 Echo Pan, Echoes Count, Ping Pong, Fat Mode (y: 306)
-    echoPanLabel.setBounds(300, 304, 48, 12);
-    echoPanSlider.setBounds(300, 316, 48, 44);
+    echoPanLabel.setBounds(340, 304, 54, 12);
+    echoPanSlider.setBounds(340, 316, 54, 44);
 
-    echoCountLabel.setBounds(350, 304, 48, 12);
-    echoCountSlider.setBounds(350, 316, 48, 44);
+    echoCountLabel.setBounds(400, 304, 54, 12);
+    echoCountSlider.setBounds(400, 316, 54, 44);
 
-    timeShiftLabel.setBounds(400, 304, 48, 12);
-    timeShiftSlider.setBounds(400, 316, 48, 44);
+    timeShiftLabel.setBounds(460, 304, 54, 12);
+    timeShiftSlider.setBounds(460, 316, 54, 44);
 
-    echoPingPongToggle.setBounds(454, 306, 106, 20);
-    echoFatToggle.setBounds(454, 328, 106, 20);
+    echoPingPongToggle.setBounds(520, 306, 116, 20);
+    echoFatToggle.setBounds(520, 328, 116, 20);
 
     // Row 4 Momentary Performance Ribbon (y: 366)
-    if (tapeStopPad) tapeStopPad->setBounds(300, 366, 62, 22);
-    if (stutterPad)  stutterPad->setBounds(365, 366, 62, 22);
-    if (divePad)     divePad->setBounds(430, 366, 62, 22);
-    if (reversePad)  reversePad->setBounds(495, 366, 65, 22);
+    if (tapeStopPad) tapeStopPad->setBounds(340, 366, 70, 22);
+    if (stutterPad)  stutterPad->setBounds(415, 366, 70, 22);
+    if (divePad)     divePad->setBounds(490, 366, 70, 22);
+    if (reversePad)  reversePad->setBounds(565, 366, 74, 22);
 
     // Row 5 Songwriting & Function toggles (y: 394)
-    cutSelfToggle.setBounds(300, 394, 76, 20);
-    slideToggle.setBounds(380, 394, 88, 20);
-    easyKeyToggle.setBounds(472, 394, 88, 20);
+    cutSelfToggle.setBounds(340, 394, 88, 20);
+    slideToggle.setBounds(434, 394, 96, 20);
+    easyKeyToggle.setBounds(536, 394, 96, 20);
 
     // Row 6 Chords & Hook dropdowns (y: 418)
-    chordProgLabel.setBounds(300, 416, 128, 12);
-    chordProgBox.setBounds(300, 428, 128, 20);
+    chordProgLabel.setBounds(340, 416, 140, 12);
+    chordProgBox.setBounds(340, 428, 140, 20);
 
-    hookGenToggle.setBounds(432, 428, 64, 20);
-    generateHookButton.setBounds(498, 428, 62, 20);
+    hookGenToggle.setBounds(488, 428, 70, 20);
+    generateHookButton.setBounds(562, 428, 72, 20);
 
     // Row 7 Macros & Scale (y: 456)
-    macroDropLabel.setBounds(300, 452, 48, 12);
-    macroDropSlider.setBounds(300, 464, 48, 44);
+    macroDropLabel.setBounds(340, 452, 54, 12);
+    macroDropSlider.setBounds(340, 464, 54, 44);
 
-    punchLabel.setBounds(350, 452, 48, 12);
-    punchSlider.setBounds(350, 464, 48, 44);
+    punchLabel.setBounds(400, 452, 54, 12);
+    punchSlider.setBounds(400, 464, 54, 44);
 
-    humanizeLabel.setBounds(400, 452, 48, 12);
-    humanizeSlider.setBounds(400, 464, 48, 44);
+    humanizeLabel.setBounds(460, 452, 54, 12);
+    humanizeSlider.setBounds(460, 464, 54, 44);
 
-    scaleRootLabel.setBounds(454, 452, 44, 12);
-    scaleRootBox.setBounds(454, 464, 44, 20);
+    scaleRootLabel.setBounds(520, 452, 50, 12);
+    scaleRootBox.setBounds(520, 464, 50, 20);
 
-    scaleTypeLabel.setBounds(502, 452, 58, 12);
-    scaleTypeBox.setBounds(502, 464, 58, 20);
+    scaleTypeLabel.setBounds(574, 452, 64, 12);
+    scaleTypeBox.setBounds(574, 464, 64, 20);
 
     // ----------------------------------------------------
-    // Section 3: Effects & Space (x: 576, y: 118, w: 268, h: 430)
+    // Section 3: Effects & Space (x: 660, y: 118, w: 304, h: 430)
     // ----------------------------------------------------
     // Row 1 (y: 145)
-    fxDriveLabel.setBounds(584, 142, 74, 13);
-    fxDriveSlider.setBounds(584, 155, 74, 54);
+    fxDriveLabel.setBounds(668, 142, 85, 13);
+    fxDriveSlider.setBounds(668, 155, 85, 54);
 
-    fxChorusMixLabel.setBounds(672, 142, 74, 13);
-    fxChorusMixSlider.setBounds(672, 155, 74, 54);
+    fxChorusMixLabel.setBounds(768, 142, 85, 13);
+    fxChorusMixSlider.setBounds(768, 155, 85, 54);
 
-    analogDriftLabel.setBounds(760, 142, 74, 13);
-    analogDriftSlider.setBounds(760, 155, 74, 54);
+    analogDriftLabel.setBounds(868, 142, 85, 13);
+    analogDriftSlider.setBounds(868, 155, 85, 54);
 
     // Row 2: Delay & Reverb (y: 225)
-    fxDelayTimeLabel.setBounds(584, 222, 74, 13);
-    fxDelayTimeSlider.setBounds(584, 235, 74, 54);
+    fxDelayTimeLabel.setBounds(668, 222, 85, 13);
+    fxDelayTimeSlider.setBounds(668, 235, 85, 54);
 
-    fxDelayMixLabel.setBounds(672, 222, 74, 13);
-    fxDelayMixSlider.setBounds(672, 235, 74, 54);
+    fxDelayMixLabel.setBounds(768, 222, 85, 13);
+    fxDelayMixSlider.setBounds(768, 235, 85, 54);
 
-    fxReverbDecayLabel.setBounds(760, 222, 74, 13);
-    fxReverbDecaySlider.setBounds(760, 235, 74, 54);
+    fxReverbDecayLabel.setBounds(868, 222, 85, 13);
+    fxReverbDecaySlider.setBounds(868, 235, 85, 54);
 
     // Row 3: Reverb Mix & Glitter Cloud (y: 305)
-    fxReverbMixLabel.setBounds(584, 302, 74, 13);
-    fxReverbMixSlider.setBounds(584, 315, 74, 54);
+    fxReverbMixLabel.setBounds(668, 302, 85, 13);
+    fxReverbMixSlider.setBounds(668, 315, 85, 54);
 
-    glitterMixLabel.setBounds(672, 302, 74, 13);
-    glitterMixSlider.setBounds(672, 315, 74, 54);
+    glitterMixLabel.setBounds(768, 302, 85, 13);
+    glitterMixSlider.setBounds(768, 315, 85, 54);
 
-    glitterGrainLabel.setBounds(760, 302, 74, 13);
-    glitterGrainSlider.setBounds(760, 315, 74, 54);
+    glitterGrainLabel.setBounds(868, 302, 85, 13);
+    glitterGrainSlider.setBounds(868, 315, 85, 54);
 
-    // Row 4 Toggles (y: 382)
-    pumpToggle.setBounds(584, 382, 120, 22);
-    monoMakerToggle.setBounds(714, 382, 120, 22);
+    // Row 4 Toggles (y: 375)
+    pumpToggle.setBounds(668, 375, 136, 22);
+    monoMakerToggle.setBounds(810, 375, 140, 22);
+
+    // Row 5 Producer Flavor Suite (y: 410)
+    producerFlavorLabel.setBounds(668, 410, 160, 13);
+    producerFlavorBox.setBounds(668, 424, 160, 24);
+
+    producerFlavorIntensityLabel.setBounds(850, 408, 95, 13);
+    producerFlavorIntensitySlider.setBounds(850, 420, 95, 50);
+
+    // Row 6 Master Volume & VU Meter (y: 476)
+    masterVolLabel.setBounds(668, 465, 75, 13);
+    masterVolSlider.setBounds(668, 478, 75, 48);
+    vuMeter.setBounds(755, 480, 195, 44);
 }
