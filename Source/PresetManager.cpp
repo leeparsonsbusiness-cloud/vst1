@@ -880,6 +880,143 @@ PresetManager::PresetManager()
     p.trashGlossX = 0.4f;
     presets.push_back(p);
 
+    // 47. Blow - Dirty Squelch Bass (Verse/Drop)
+    p = createDefaultPreset("Blow - Dirty Squelch Bass");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = -1;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 3;
+    p.unisonDetune = 12.0f;
+    p.osc2Shape = 1.0f; // Square
+    p.osc2Octave = -2;
+    p.osc2Level = 0.70f;
+    p.subWave = 0;
+    p.subOctave = -2;
+    p.subLevel = 0.85f;
+    p.subDrive = 0.60f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 2200.0f;
+    p.filterRes = 0.45f;
+    p.filterDrive = 4.5f;
+    p.filterEnvAmt = 0.55f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.18f;
+    p.filterSustain = 0.20f;
+    p.playMode = 1; // Mono Legato
+    p.glideTime = 45.0f;
+    p.trashGlossX = 0.55f; // Grit
+    p.fxDrive = 2.5f;
+    p.fxChorusMix = 0.20f;
+    presets.push_back(p);
+
+    // 48. Blow - Pumping Anthem Chords (Pre/Chorus)
+    p = createDefaultPreset("Blow - Pumping Anthem Chords");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 0;
+    p.osc1Level = 0.90f;
+    p.unisonCount = 7; // Max Unison Supersaw
+    p.unisonDetune = 35.0f;
+    p.osc2Shape = 2.0f;
+    p.osc2Octave = -1;
+    p.osc2Level = 0.65f;
+    p.filterMode = 0; // LPF 12
+    p.filterCutoff = 12000.0f;
+    p.filterRes = 0.15f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.50f;
+    p.ampSustain = 0.90f;
+    p.ampRelease = 0.40f;
+    p.pumpActive = 1; // Sidechain Pumper
+    p.pumpDepth = 0.80f;
+    p.pumpDivision = 0; // 1/4 note pump
+    p.fxChorusMix = 0.50f;
+    p.fxDelayMix = 0.25f;
+    p.fxReverbMix = 0.35f;
+    p.trashGlossY = 0.45f; // Gloss
+    presets.push_back(p);
+
+    // 49. Blow - Screaming Laser Lead (Chorus Hook)
+    p = createDefaultPreset("Blow - Screaming Laser Lead");
+    p.osc1Shape = 2.0f; // Saw
+    p.osc1Octave = 1;
+    p.osc1Level = 0.95f;
+    p.unisonCount = 5;
+    p.unisonDetune = 20.0f;
+    p.osc2Shape = 1.0f; // Square Sync
+    p.osc2Octave = 0;
+    p.osc2Level = 0.60f;
+    p.oscSync = 1;
+    p.filterMode = 5; // Formant Vowel
+    p.formantMorph = 0.85f;
+    p.filterRes = 0.40f;
+    p.filterDrive = 2.0f;
+    p.playMode = 1; // Mono Legato
+    p.glideTime = 55.0f;
+    p.ampAttack = 0.001f;
+    p.ampRelease = 0.35f;
+    p.fxDelayTime = 333.0f; // 1/8d delay
+    p.fxDelayMix = 0.35f;
+    p.fxReverbMix = 0.30f;
+    p.trashGlossX = 0.35f;
+    presets.push_back(p);
+
+    // 50. Blow - Staccato Party Pluck (Intro/Verse Riff)
+    p = createDefaultPreset("Blow - Staccato Party Pluck");
+    p.osc1Shape = 1.0f; // Square
+    p.osc1Octave = 0;
+    p.osc1Level = 0.90f;
+    p.unisonCount = 3;
+    p.unisonDetune = 10.0f;
+    p.osc2Shape = 2.0f; // Saw
+    p.osc2Octave = 0;
+    p.osc2Level = 0.50f;
+    p.filterMode = 1; // LPF 24
+    p.filterCutoff = 1800.0f;
+    p.filterRes = 0.35f;
+    p.filterEnvAmt = 0.70f;
+    p.filterAttack = 0.001f;
+    p.filterDecay = 0.12f;
+    p.filterSustain = 0.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.20f;
+    p.ampSustain = 0.0f;
+    p.ampRelease = 0.10f;
+    p.fxDelayTime = 250.0f; // 1/8 note stereo bounce
+    p.fxDelayMix = 0.40f;
+    p.fxReverbMix = 0.20f;
+    presets.push_back(p);
+
+    // 51. Blow - Glitter Shimmer FX (Transitions)
+    p = createDefaultPreset("Blow - Glitter Shimmer FX");
+    p.osc1Shape = 2.0f;
+    p.osc1Octave = 1;
+    p.unisonCount = 7;
+    p.unisonDetune = 40.0f;
+    p.filterCutoff = 8000.0f;
+    p.ampAttack = 0.8f;
+    p.ampRelease = 2.0f;
+    p.fxReverbDecay = 0.95f;
+    p.fxReverbMix = 0.70f;
+    presets.push_back(p);
+
+    // 52. Blow - Heavy Sub Smasher (Drop Anchor)
+    p = createDefaultPreset("Blow - Heavy Sub Smasher");
+    p.osc1Shape = 0.0f; // Sine
+    p.osc1Octave = -2;
+    p.osc1Level = 0.90f;
+    p.subWave = 0;
+    p.subOctave = -2;
+    p.subLevel = 1.0f;
+    p.subDrive = 0.8f;
+    p.filterCutoff = 350.0f;
+    p.monoMakerActive = 1;
+    p.monoMakerFreq = 160.0f;
+    p.ampAttack = 0.001f;
+    p.ampDecay = 0.30f;
+    p.ampSustain = 0.85f;
+    p.ampRelease = 0.10f;
+    presets.push_back(p);
+
     // Populate name array
     for (const auto& preset : presets)
         presetNames.push_back(preset.name);
@@ -893,7 +1030,7 @@ int PresetManager::getNumPresets() const
 juce::String PresetManager::getPresetName(int index) const
 {
     if (index >= 0 && index < getNumPresets())
-        return presets[index].name;
+        return presets[static_cast<size_t>(index)].name;
     return {};
 }
 
@@ -907,7 +1044,7 @@ void PresetManager::applyPreset(int index, juce::AudioProcessorValueTreeState& a
     if (index < 0 || index >= getNumPresets())
         return;
         
-    const auto& p = presets[index];
+    const auto& p = presets[static_cast<size_t>(index)];
     
     // Safety store of index
     if (auto* param = apvts.getParameter("preset"))

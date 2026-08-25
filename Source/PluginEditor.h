@@ -405,6 +405,16 @@ public:
         billboardMenu.addItem(45, "Right Round (Club Pulse Stab)");
         billboardMenu.addItem(46, "Blow (Glitter Squelch Lead)");
         menu.addSubMenu("07_Billboard Hits & Anthems", billboardMenu);
+
+        // 8. Kesha "Blow" Studio Suite
+        juce::PopupMenu blowMenu;
+        blowMenu.addItem(47, "Blow - Dirty Squelch Bass");
+        blowMenu.addItem(48, "Blow - Pumping Anthem Chords");
+        blowMenu.addItem(49, "Blow - Screaming Laser Lead");
+        blowMenu.addItem(50, "Blow - Staccato Party Pluck");
+        blowMenu.addItem(51, "Blow - Glitter Shimmer FX");
+        blowMenu.addItem(52, "Blow - Heavy Sub Smasher");
+        menu.addSubMenu("08_Kesha 'Blow' Studio Suite", blowMenu);
         
         // User Presets
         juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
@@ -452,7 +462,7 @@ public:
             {
                 menuShowing = false;
                 if (result == 0) return;
-                if (result >= 1 && result <= 46)
+                if (result >= 1 && result <= 52)
                 {
                     if (onPresetSelected)
                         onPresetSelected(result - 1);

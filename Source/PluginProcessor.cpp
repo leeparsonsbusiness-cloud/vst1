@@ -542,7 +542,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout KeshaZeddSynthAudioProcessor
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     // Preset & Master Volume
-    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("preset", 1), "Preset", 0, 45, 0));
+    params.push_back(std::make_unique<juce::AudioParameterInt>(juce::ParameterID("preset", 1), "Preset", 0, 51, 0));
     params.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("master_vol", 1), "Master Volume", 0.0f, 1.0f, 0.8f));
 
     // Oscillator 1 & Unison
