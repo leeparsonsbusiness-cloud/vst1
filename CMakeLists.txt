@@ -16,7 +16,7 @@ juce_add_plugin(KeshaZeddSynth
     PLUGIN_MANUFACTURER_CODE Kesz
     PLUGIN_CODE Kzs1
     FORMATS VST3 AU
-    PRODUCT_NAME "KeshaZeddSynth"
+    PRODUCT_NAME "LEES HOUSE"
     COPY_PLUGIN_AFTER_BUILD TRUE
 )
 

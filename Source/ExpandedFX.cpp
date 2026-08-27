@@ -44,6 +44,8 @@ void ExpandedFX::process(juce::AudioBuffer<float>& buffer, juce::AudioProcessorV
     float phaserDepth = apvts.getRawParameterValue("phaser_depth")->load();
     float phaserFeedback = apvts.getRawParameterValue("phaser_feedback")->load();
     float phaserMix = apvts.getRawParameterValue("phaser_mix")->load();
+    if (phaserActive && phaserMix <= 0.001f)
+        phaserMix = 0.50f; // Default sweet spot for beach festival sweeping phaser
 
     float* LData = buffer.getWritePointer(0);
     float* RData = (numChannels > 1) ? buffer.getWritePointer(1) : nullptr;

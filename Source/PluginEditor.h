@@ -22,11 +22,11 @@ public:
         auto bounds = getLocalBounds().toFloat().reduced(2.0f);
         
         // Dark LCD background
-        g.setColour(juce::Colour(0xff12161b));
-        g.fillRoundedRectangle(bounds, 3.0f);
+        g.setColour(juce::Colour(0xff0e131d));
+        g.fillRoundedRectangle(bounds, 4.0f);
 
-        g.setColour(juce::Colour(0xff242b36));
-        g.drawRoundedRectangle(bounds, 3.0f, 1.0f);
+        g.setColour(juce::Colour(0xff222b3d));
+        g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
 
         // Fetch envelope values
         float delayVal = (processor.getAPVTS().getRawParameterValue("env_delay") != nullptr) ? processor.getAPVTS().getRawParameterValue("env_delay")->load() : 0.0f;
@@ -64,14 +64,13 @@ public:
         float x6 = std::min(bounds.getRight() - 8.0f, x5 + (relVal / totalTime) * w);
         float y6 = startY;
 
-        // Draw Envelope Fill
+        // Draw Envelope Fill with sunset gradient
         juce::Path fillPath;
         fillPath.startNewSubPath(x0, y0);
         fillPath.lineTo(x1, y1);
         fillPath.lineTo(x2, y2);
         fillPath.lineTo(x3, y3);
 
-        // Decay curve with tension
         int numCurvSteps = 12;
         for (int step = 1; step <= numCurvSteps; ++step)
         {
@@ -88,7 +87,9 @@ public:
         fillPath.lineTo(x0, startY);
         fillPath.closeSubPath();
 
-        g.setColour(juce::Colour(0xff55ee77).withAlpha(0.18f));
+        juce::ColourGradient fillGrad(juce::Colour(0xffff6b35).withAlpha(0.35f), 0.0f, topY,
+                                      juce::Colour(0xff00f0ff).withAlpha(0.08f), 0.0f, startY, false);
+        g.setGradientFill(fillGrad);
         g.fillPath(fillPath);
 
         // Draw Envelope Outline
@@ -110,15 +111,15 @@ public:
         strokePath.lineTo(x5, y5);
         strokePath.lineTo(x6, y6);
 
-        g.setColour(juce::Colour(0xff66ff88));
-        g.strokePath(strokePath, juce::PathStrokeType(1.6f));
+        g.setColour(juce::Colour(0xffff6b35));
+        g.strokePath(strokePath, juce::PathStrokeType(1.8f));
 
         // Draw vertex nodes
         auto drawVertex = [&](float vx, float vy) {
-            g.setColour(juce::Colour(0xff12161b));
-            g.fillEllipse(vx - 3.0f, vy - 3.0f, 6.0f, 6.0f);
-            g.setColour(juce::Colour(0xff88ffaa));
-            g.drawEllipse(vx - 3.0f, vy - 3.0f, 6.0f, 6.0f, 1.2f);
+            g.setColour(juce::Colour(0xff0e131d));
+            g.fillEllipse(vx - 3.5f, vy - 3.5f, 7.0f, 7.0f);
+            g.setColour(juce::Colour(0xffffd166));
+            g.drawEllipse(vx - 3.5f, vy - 3.5f, 7.0f, 7.0f, 1.4f);
         };
 
         drawVertex(x1, y1);
@@ -144,30 +145,43 @@ public:
     {
         auto bounds = getLocalBounds().toFloat().reduced(1.0f);
         
-        juce::Colour bg = isDown ? accentColour.withAlpha(0.35f) : (isHovered ? juce::Colour(0xff222533) : juce::Colour(0xff161822));
+        juce::Colour bg = isDown ? accentColour.withAlpha(0.40f) : (isHovered ? juce::Colour(0xff22293a) : juce::Colour(0xff141824));
         g.setColour(bg);
-        g.fillRoundedRectangle(bounds, 3.5f);
+        g.fillRoundedRectangle(bounds, 4.0f);
 
-        juce::Colour border = isDown ? accentColour : (isHovered ? accentColour.withAlpha(0.6f) : juce::Colour(0xff2e3244));
+        juce::Colour border = isDown ? accentColour : (isHovered ? accentColour.withAlpha(0.6f) : juce::Colour(0xff2a334a));
         g.setColour(border);
-        g.drawRoundedRectangle(bounds, 3.5f, isDown ? 1.5f : 1.0f);
+        g.drawRoundedRectangle(bounds, 4.0f, isDown ? 1.8f : 1.0f);
 
-        g.setColour(isDown ? juce::Colours::white : (isHovered ? juce::Colour(0xfff0f2f8) : juce::Colour(0xffa2a8be)));
-        g.setFont(juce::FontOptions(8.5f, juce::Font::bold));
-        g.drawText(text, bounds, juce::Justification::centred, false);
+        // Text
+        g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
+        g.setColour(isDown ? juce::Colours::white : (isHovered ? accentColour : juce::Colour(0xffd0d8e8)));
+        g.drawText(text, bounds, juce::Justification::centred);
+    }
+
+    void mouseDown(const juce::MouseEvent&) override
+    {
+        isDown = true;
+        repaint();
+        if (callback) callback(true);
+    }
+
+    void mouseUp(const juce::MouseEvent&) override
+    {
+        isDown = false;
+        repaint();
+        if (callback) callback(false);
     }
 
     void mouseEnter(const juce::MouseEvent&) override { isHovered = true; repaint(); }
-    void mouseExit(const juce::MouseEvent&) override { isHovered = false; isDown = false; if (callback) callback(false); repaint(); }
-    void mouseDown(const juce::MouseEvent&) override { isDown = true; if (callback) callback(true); repaint(); }
-    void mouseUp(const juce::MouseEvent&) override { isDown = false; if (callback) callback(false); repaint(); }
+    void mouseExit(const juce::MouseEvent&) override  { isHovered = false; isDown = false; repaint(); }
 
 private:
     juce::String text;
     juce::Colour accentColour;
     std::function<void(bool)> callback;
-    bool isHovered = false;
     bool isDown = false;
+    bool isHovered = false;
 };
 
 // Drag-and-Drop MIDI Export Handle Component (Zeddify, Chords, Hook, Vault)
@@ -198,7 +212,7 @@ public:
         juce::String labelStr = (exportType == Chords) ? "CHORDS"
                               : (exportType == Hook)   ? "HOOK"
                               : (exportType == Vault)  ? "VAULT"
-                                                       : "EXPORT";
+                                                       : "ARP";
 
         juce::Colour textCol = (exportType == Chords) ? (isHovered ? juce::Colour(0xff88eaff) : juce::Colour(0xff9ec7d8))
                              : (exportType == Hook)   ? (isHovered ? juce::Colour(0xfff0b8ff) : juce::Colour(0xffc59ed8))
@@ -248,309 +262,76 @@ public:
 
 private:
     KeshaZeddSynthAudioProcessor& processor;
-    ExportType exportType = Zeddify;
+    ExportType exportType;
     int vaultIndex = 0;
     bool isHovered = false;
 };
 
-// Stereo Peak/RMS Output VU Meter Component
-class VUMeterComponent : public juce::Component, private juce::Timer
+// Stereo VU Meter Component
+class VUMeterComponent : public juce::Component
 {
 public:
-    VUMeterComponent(KeshaZeddSynthAudioProcessor& p) : processor(p)
-    {
-        startTimerHz(30);
-    }
-
-    ~VUMeterComponent() override
-    {
-        stopTimer();
-    }
-
-    void timerCallback() override
-    {
-        float targetL = processor.getOutputLevelL();
-        float targetR = processor.getOutputLevelR();
-
-        levelL = std::max(targetL, levelL * 0.85f);
-        levelR = std::max(targetR, levelR * 0.85f);
-
-        repaint();
-    }
+    VUMeterComponent(KeshaZeddSynthAudioProcessor& p) : processor(p) {}
+    ~VUMeterComponent() override = default;
 
     void paint(juce::Graphics& g) override
     {
-        auto bounds = getLocalBounds().toFloat();
-        g.fillAll(juce::Colour(0xff0d0e12));
+        auto bounds = getLocalBounds().toFloat().reduced(2.0f);
+        
+        // Background
+        g.setColour(juce::Colour(0xff0e131d));
+        g.fillRoundedRectangle(bounds, 3.0f);
+        
+        g.setColour(juce::Colour(0xff222b3d));
+        g.drawRoundedRectangle(bounds, 3.0f, 1.0f);
 
-        g.setColour(juce::Colour(0xff22242e));
-        g.drawRoundedRectangle(bounds, 2.0f, 1.0f);
+        float lvlL = processor.getOutputLevelL();
+        float lvlR = processor.getOutputLevelR();
 
-        float barWidth = (bounds.getWidth() - 5.0f) * 0.5f;
-        float h = bounds.getHeight() - 4.0f;
+        float barH = (bounds.getHeight() - 6.0f) * 0.5f;
+        float maxW = bounds.getWidth() - 8.0f;
 
-        auto drawBar = [&](float x, float level)
-        {
-            float fillH = juce::jlimit(0.0f, h, level * h);
-            float y = bounds.getBottom() - 2.0f - fillH;
+        auto drawChannelMeter = [&](float y, float level, const juce::String& label) {
+            // Label
+            g.setFont(juce::FontOptions(8.0f, juce::Font::bold));
+            g.setColour(juce::Colour(0xff8896b0));
+            g.drawText(label, (int)(bounds.getX() + 4.0f), (int)y, 10, (int)barH, juce::Justification::centredLeft);
 
-            juce::ColourGradient grad(juce::Colour(0xff00d4ff), x, bounds.getBottom(),
-                                      juce::Colour(0xffff3366), x, bounds.getY(), false);
-            grad.addColour(0.6f, juce::Colour(0xffffaa00));
+            float fillW = juce::jlimit(0.0f, maxW - 14.0f, level * (maxW - 14.0f));
+            juce::Rectangle<float> meterRect(bounds.getX() + 16.0f, y + 2.0f, fillW, barH - 4.0f);
+
+            juce::ColourGradient grad(juce::Colour(0xff00f0ff), bounds.getX() + 16.0f, 0.0f,
+                                      juce::Colour(0xffff2a6d), bounds.getX() + 16.0f + (maxW - 14.0f), 0.0f, false);
+            grad.addColour(0.7, juce::Colour(0xffffd166));
 
             g.setGradientFill(grad);
-            g.fillRect(x, y, barWidth, fillH);
+            g.fillRoundedRectangle(meterRect, 1.5f);
         };
 
-        drawBar(bounds.getX() + 1.5f, levelL);
-        drawBar(bounds.getX() + 3.5f + barWidth, levelR);
+        drawChannelMeter(bounds.getY() + 2.0f, lvlL, "L");
+        drawChannelMeter(bounds.getY() + 2.0f + barH + 2.0f, lvlR, "R");
     }
 
 private:
     KeshaZeddSynthAudioProcessor& processor;
-    float levelL = 0.0f;
-    float levelR = 0.0f;
 };
 
-// Categorized Preset Dropdown Menu Component
-class PresetComboBox : public juce::ComboBox
-{
-public:
-    PresetComboBox() { setEditableText(false); }
-    ~PresetComboBox() override = default;
-    
-    std::function<void(int)> onPresetSelected;
-    std::function<void(const juce::File&)> onUserPresetSelected;
-
-    void showPopup() override { openPresetMenu(); }
-    void mouseDown(const juce::MouseEvent&) override { openPresetMenu(); }
-    
-    void openPresetMenu()
-    {
-        if (menuShowing) return;
-        menuShowing = true;
-
-        juce::PopupMenu menu;
-        
-        // 1. Basses
-        juce::PopupMenu bassesMenu;
-        bassesMenu.addItem(1, "Dirty Electro Saw Bass");
-        bassesMenu.addItem(2, "Complextro Growl Bass");
-        bassesMenu.addItem(3, "Distorted Square Bass");
-        bassesMenu.addItem(4, "Acid Squelch Bass");
-        bassesMenu.addItem(5, "Sub Smasher");
-        bassesMenu.addItem(6, "Metallic FM Reeses Bass");
-        bassesMenu.addItem(7, "Talking Formant Bass");
-        bassesMenu.addItem(8, "Rubber Band Pluck Bass");
-        menu.addSubMenu("01_Basses", bassesMenu);
-        
-        // 2. Leads
-        juce::PopupMenu leadsMenu;
-        leadsMenu.addItem(9, "Clarity Supersaw");
-        leadsMenu.addItem(10, "8-Bit Glitch Lead");
-        leadsMenu.addItem(11, "Vocal Formant Lead");
-        leadsMenu.addItem(12, "Stadium Anthem Lead");
-        leadsMenu.addItem(13, "Dirty Sync Lead");
-        leadsMenu.addItem(14, "Glitter Pop Screamer");
-        leadsMenu.addItem(15, "Laser Beam Lead");
-        leadsMenu.addItem(16, "Eurodance Rave Saw");
-        menu.addSubMenu("02_Leads", leadsMenu);
-        
-        // 3. Plucks
-        juce::PopupMenu plucksMenu;
-        plucksMenu.addItem(17, "Zedd Punch Pluck");
-        plucksMenu.addItem(18, "Trashy Pop Pluck");
-        plucksMenu.addItem(19, "Glass Bell Pluck");
-        plucksMenu.addItem(20, "Marimba Synth Strike");
-        plucksMenu.addItem(21, "Staccato Arp Bite");
-        plucksMenu.addItem(22, "Hollow Square Pluck");
-        plucksMenu.addItem(23, "Club Drop Pluck");
-        menu.addSubMenu("03_Plucks", plucksMenu);
-        
-        // 4. Keys & Chords
-        juce::PopupMenu keysMenu;
-        keysMenu.addItem(24, "Euphoric Pop Chords");
-        keysMenu.addItem(25, "Radio Piano-Synth Hybrid");
-        keysMenu.addItem(26, "Pumping Synth Brass");
-        keysMenu.addItem(27, "Wobbly Lo-Fi Keys");
-        keysMenu.addItem(28, "Anthem Organ Stab");
-        keysMenu.addItem(29, "Bright EDM Piano Stab");
-        keysMenu.addItem(30, "Velvet Neo-Pop Chords");
-        menu.addSubMenu("04_Keys & Chords", keysMenu);
-        
-        // 5. Pads & Textures
-        juce::PopupMenu padsMenu;
-        padsMenu.addItem(31, "Stadium Sidechain Swell");
-        padsMenu.addItem(32, "Shimmering Pop Air");
-        padsMenu.addItem(33, "Sunset Warmth Pad");
-        padsMenu.addItem(34, "Dark Cinema Swell");
-        padsMenu.addItem(35, "Euphoria Choir Wash");
-        menu.addSubMenu("05_Pads & Textures", padsMenu);
-        
-        // 6. Transitions & FX
-        juce::PopupMenu fxMenu;
-        fxMenu.addItem(36, "Hyperpop Bubble FX");
-        fxMenu.addItem(37, "Tension Noise Riser");
-        fxMenu.addItem(38, "Sub Drop Boom");
-        fxMenu.addItem(39, "Downlifter Laser Fall");
-        fxMenu.addItem(40, "Pre-Drop Impact");
-        menu.addSubMenu("06_Transitions & FX", fxMenu);
-
-        // 7. Billboard Hits & Anthems
-        juce::PopupMenu billboardMenu;
-        billboardMenu.addItem(41, "Safe and Sound (Brass Lead)");
-        billboardMenu.addItem(42, "Beautiful Now (Zedd Anthem Lead)");
-        billboardMenu.addItem(43, "Glad You Came (Club Accordion Pluck)");
-        billboardMenu.addItem(44, "Let It Rock (Distorted Rock Lead)");
-        billboardMenu.addItem(45, "Right Round (Club Pulse Stab)");
-        billboardMenu.addItem(46, "Blow (Glitter Squelch Lead)");
-        menu.addSubMenu("07_Billboard Hits & Anthems", billboardMenu);
-
-        // 8. Kesha "Blow" Studio Suite
-        juce::PopupMenu blowMenu;
-        blowMenu.addItem(47, "Blow - Dirty Squelch Bass");
-        blowMenu.addItem(48, "Blow - Pumping Anthem Chords");
-        blowMenu.addItem(49, "Blow - Screaming Laser Lead");
-        blowMenu.addItem(50, "Blow - Staccato Party Pluck");
-        blowMenu.addItem(51, "Blow - Glitter Shimmer FX");
-        blowMenu.addItem(52, "Blow - Heavy Sub Smasher");
-        menu.addSubMenu("08_Kesha 'Blow' Studio Suite", blowMenu);
-
-        // 9. Zedd "Beautiful Now" Anthem Suite
-        juce::PopupMenu zeddAnthemMenu;
-        zeddAnthemMenu.addItem(53, "Beautiful Now - Euphoric Drop Chords");
-        zeddAnthemMenu.addItem(54, "Beautiful Now - Soaring Festival Lead");
-        zeddAnthemMenu.addItem(55, "Beautiful Now - Clockwork Bell Pluck");
-        zeddAnthemMenu.addItem(56, "Beautiful Now - Rolling Progressive Bass");
-        zeddAnthemMenu.addItem(57, "Beautiful Now - Cinematic Emotional Pad");
-        zeddAnthemMenu.addItem(58, "Beautiful Now - Emotional Breakdown Piano");
-        zeddAnthemMenu.addItem(59, "Beautiful Now - Stadium Punch Kick");
-        zeddAnthemMenu.addItem(60, "Beautiful Now - White Noise Tension Sweep");
-        menu.addSubMenu("09_Zedd 'Beautiful Now' Suite", zeddAnthemMenu);
-        
-        // 10. Flo Rida "Right Round" Club Suite
-        juce::PopupMenu floRidaMenu;
-        floRidaMenu.addItem(61, "Right Round - Club Pulse Synth Stab");
-        floRidaMenu.addItem(62, "Right Round - Dirty Electro Slap Bass");
-        floRidaMenu.addItem(63, "Right Round - Anthemic Octave Club Lead");
-        floRidaMenu.addItem(64, "Right Round - Pumping Stadium Chords");
-        floRidaMenu.addItem(65, "Right Round - Glitch Squelch Arp");
-        floRidaMenu.addItem(66, "Right Round - 80s Retro Analog Brass");
-        menu.addSubMenu("10_Flo Rida 'Right Round' Suite", floRidaMenu);
-
-        // 11. Kevin Rudolf "Let It Rock" Pop-Rock Suite
-        juce::PopupMenu kevinRudolfMenu;
-        kevinRudolfMenu.addItem(67, "Let It Rock - Overdriven Power-Saw Riff");
-        kevinRudolfMenu.addItem(68, "Let It Rock - Screaming Laser Lead");
-        kevinRudolfMenu.addItem(69, "Let It Rock - High-Energy Synth Riser FX");
-        kevinRudolfMenu.addItem(70, "Let It Rock - Pumping Electro-Rock Chords");
-        kevinRudolfMenu.addItem(71, "Let It Rock - Distorted Gritty 808 Sub");
-        kevinRudolfMenu.addItem(72, "Let It Rock - Stadium Impact Downlifter FX");
-        menu.addSubMenu("11_Kevin Rudolf 'Let It Rock' Suite", kevinRudolfMenu);
-
-        // 12. Kesha "Take It Off" Modern Festival Suite
-        juce::PopupMenu keshaFestivalMenu;
-        keshaFestivalMenu.addItem(73, "Take It Off - Sharp Confetti Hook Pluck");
-        keshaFestivalMenu.addItem(74, "Take It Off - Gritty Bridge Distortion Bass");
-        keshaFestivalMenu.addItem(75, "Take It Off - Festival Pumping Supersaws");
-        keshaFestivalMenu.addItem(76, "Take It Off - Screaming Arabian Hook Lead");
-        keshaFestivalMenu.addItem(77, "Take It Off - Glitter Confetti Shimmer FX");
-        keshaFestivalMenu.addItem(78, "Take It Off - Stomping Festival Kick & Sub");
-        menu.addSubMenu("12_Kesha 'Take It Off' Suite", keshaFestivalMenu);
-
-        // 13. Album Master & Signature Pop Suite
-        juce::PopupMenu albumMasterMenu;
-        albumMasterMenu.addItem(79, "Tik Tok - Glitter Pulse Stab");
-        albumMasterMenu.addItem(80, "Clarity - Pure Complextro Saw Stack");
-        albumMasterMenu.addItem(81, "Die Young - Acoustic Pop Drop Lead");
-        albumMasterMenu.addItem(82, "Stay The Night - Stadium Laser Lead");
-        albumMasterMenu.addItem(83, "Your Love Is My Drug - 80s Poly Brass");
-        albumMasterMenu.addItem(84, "Album Master - Final Club Limiter FX");
-        menu.addSubMenu("13_Album Master Suite", albumMasterMenu);
-        
-        // User Presets
-        juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                                .getChildFile("KeshaAndZeddSynth")
-                                .getChildFile("UserPresets");
-        
-        std::vector<juce::File> userFiles;
-        
-        if (userDir.exists() && userDir.isDirectory())
-        {
-            juce::PopupMenu userMenu;
-            int itemId = 1000;
-            
-            juce::Array<juce::File> categories;
-            userDir.findChildFiles(categories, juce::File::findDirectories, false);
-            
-            for (auto& cat : categories)
-            {
-                juce::PopupMenu catMenu;
-                juce::Array<juce::File> files;
-                cat.findChildFiles(files, juce::File::findFiles, false, "*.json");
-                for (auto& file : files)
-                {
-                    catMenu.addItem(itemId, file.getFileNameWithoutExtension());
-                    userFiles.push_back(file);
-                    itemId++;
-                }
-                userMenu.addSubMenu(cat.getFileName(), catMenu);
-            }
-            
-            juce::Array<juce::File> rootFiles;
-            userDir.findChildFiles(rootFiles, juce::File::findFiles, false, "*.json");
-            for (auto& file : rootFiles)
-            {
-                userMenu.addItem(itemId, file.getFileNameWithoutExtension());
-                userFiles.push_back(file);
-                itemId++;
-            }
-            
-            menu.addSubMenu("User Presets", userMenu);
-        }
-
-        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
-            [this, userFiles](int result)
-            {
-                menuShowing = false;
-                if (result == 0) return;
-                if (result >= 1 && result <= 84)
-                {
-                    if (onPresetSelected)
-                        onPresetSelected(result - 1);
-                }
-                else if (result >= 1000)
-                {
-                    size_t fileIdx = static_cast<size_t>(result - 1000);
-                    if (fileIdx < userFiles.size() && onUserPresetSelected)
-                    {
-                        onUserPresetSelected(userFiles[fileIdx]);
-                    }
-                }
-            });
-    }
-
-private:
-    bool menuShowing = false;
-};
-
-// LookAndFeel with 4 Theme Skins
+// Custom LookAndFeel for Modern Beach Festival House Vibe
 class ModernSynthLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    enum Theme
-    {
-        AnalogLab = 0,
-        CyberNeon = 1,
-        VintageCream = 2,
-        StealthBlackout = 3
-    };
+    enum Theme { BeachFestival = 0, MiamiVice = 1, IbizaGold = 2, StealthBlackout = 3 };
 
     ModernSynthLookAndFeel();
     ~ModernSynthLookAndFeel() override = default;
 
     void setTheme(int themeIndex);
     int getTheme() const { return currentTheme; }
+
+    juce::Colour getBgColour() const;
+    juce::Colour getCardBgColour() const;
+    juce::Colour getCardBorderColour() const;
+    juce::Colour getAccentColour(int index) const;
 
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                           float sliderPos, float rotaryStartAngle, float rotaryEndAngle,
@@ -560,25 +341,169 @@ public:
                       int buttonX, int buttonY, int buttonW, int buttonH,
                       juce::ComboBox& box) override;
 
-    void drawToggleButton(juce::Graphics& g, juce::ToggleButton& button,
-                          bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
-
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,
                               const juce::Colour& backgroundColour,
-                              bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+                              bool shouldDrawButtonAsHighlighted,
+                              bool shouldDrawButtonAsDown) override;
 
-    juce::Colour getBgColour() const;
-    juce::Colour getCardBgColour() const;
-    juce::Colour getCardBorderColour() const;
-    juce::Colour getAccentColour(int bayIndex) const;
     void drawSidePanels(juce::Graphics& g, int width, int height) const;
 
 private:
-    int currentTheme = 0;
+    int currentTheme = BeachFestival;
 };
 
+// Categorized Preset Dropdown Component
+class CustomPresetComboBox : public juce::ComboBox
+{
+public:
+    CustomPresetComboBox() = default;
+    ~CustomPresetComboBox() override = default;
+
+    std::function<void(int)> onPresetSelected;
+
+    void showPopup() override
+    {
+        juce::PopupMenu menu;
+
+        // 1. Zedd Iconic Anthems
+        juce::PopupMenu zeddMenu;
+        zeddMenu.addItem(1, "Clarity Supersaw Stack");
+        zeddMenu.addItem(2, "Beautiful Now Anthem Lead");
+        zeddMenu.addItem(3, "Zedd Punch Pluck");
+        zeddMenu.addItem(4, "Complextro Growl Bass");
+        zeddMenu.addItem(5, "Stay The Night Laser");
+        zeddMenu.addItem(6, "Spectrum Stadium Lead");
+        menu.addSubMenu("01_Zedd Signature", zeddMenu);
+
+        // 2. Kesha Glitter Party
+        juce::PopupMenu keshaMenu;
+        keshaMenu.addItem(7, "Tik Tok Glitter Pulse");
+        keshaMenu.addItem(8, "Blow Squelch Screamer");
+        keshaMenu.addItem(9, "Take It Off Dirty Hook");
+        keshaMenu.addItem(10, "Die Young Acoustic Drop");
+        keshaMenu.addItem(11, "Your Love Is My Drug Brass");
+        keshaMenu.addItem(12, "Crazy Kids Power Riff");
+        menu.addSubMenu("02_Kesha Glitter Party", keshaMenu);
+
+        // 3. Beach House Basslines
+        juce::PopupMenu bassMenu;
+        bassMenu.addItem(13, "Dirty Electro Saw Bass");
+        bassMenu.addItem(14, "Rubber Band Pluck Bass");
+        bassMenu.addItem(15, "Acid Squelch Bass");
+        bassMenu.addItem(16, "Sub Smasher (4-on-Floor)");
+        bassMenu.addItem(17, "Metallic FM Growl Bass");
+        bassMenu.addItem(18, "Talking Formant Bass");
+        menu.addSubMenu("03_Festival Basslines", bassMenu);
+
+        // 4. Festival Anthem Leads
+        juce::PopupMenu leadMenu;
+        leadMenu.addItem(19, "Stadium Anthem Lead");
+        leadMenu.addItem(20, "Laser Beam Screamer");
+        leadMenu.addItem(21, "Eurodance Rave Saw");
+        leadMenu.addItem(22, "Vocal Formant Lead");
+        leadMenu.addItem(23, "Dirty Sync Lead");
+        leadMenu.addItem(24, "8-Bit Glitch Lead");
+        menu.addSubMenu("04_Festival Leads", leadMenu);
+
+        // 5. Beach Plucks & Bells
+        juce::PopupMenu pluckMenu;
+        pluckMenu.addItem(25, "Glass Bell Pluck");
+        pluckMenu.addItem(26, "Trashy Pop Pluck");
+        pluckMenu.addItem(27, "Marimba Synth Strike");
+        pluckMenu.addItem(28, "Staccato Arp Bite");
+        pluckMenu.addItem(29, "Hollow Square Pluck");
+        pluckMenu.addItem(30, "Club Drop Pluck");
+        menu.addSubMenu("05_Plucks & Bells", pluckMenu);
+
+        // 6. Stadium Chords & Keys
+        juce::PopupMenu chordMenu;
+        chordMenu.addItem(31, "Euphoric Pop Chords");
+        chordMenu.addItem(32, "Radio Piano-Synth Hybrid");
+        chordMenu.addItem(33, "Pumping Synth Brass");
+        chordMenu.addItem(34, "Bright EDM Piano Stab");
+        chordMenu.addItem(35, "Anthem Organ Stab");
+        chordMenu.addItem(36, "Velvet Neo-Pop Chords");
+        menu.addSubMenu("06_Stadium Chords", chordMenu);
+
+        // 7. Sunset Atmospheric Pads
+        juce::PopupMenu padMenu;
+        padMenu.addItem(37, "Lush Sidechain Pad");
+        padMenu.addItem(38, "Shimmer Dream Pad");
+        padMenu.addItem(39, "Dark Cinema Drone");
+        padMenu.addItem(40, "Retro Vapor Sweep");
+        padMenu.addItem(41, "Glacier Atmosphere");
+        menu.addSubMenu("07_Atmospheric Pads", padMenu);
+
+        // 8. Riser & Tension FX
+        juce::PopupMenu fxMenu;
+        fxMenu.addItem(42, "Hyperpop Bubble FX");
+        fxMenu.addItem(43, "Tension Noise Riser");
+        fxMenu.addItem(44, "Sub Drop Boom");
+        fxMenu.addItem(45, "Downlifter Laser Fall");
+        fxMenu.addItem(46, "Pre-Drop Stadium Impact");
+        menu.addSubMenu("08_FX & Risers", fxMenu);
+
+        // 9. Full Track Suites
+        juce::PopupMenu suitesMenu;
+        suitesMenu.addItem(47, "Blow - Staccato Party Pluck");
+        suitesMenu.addItem(48, "Blow - Dirty Squelch Bass");
+        suitesMenu.addItem(49, "Blow - Pumping Anthem Chords");
+        suitesMenu.addItem(50, "Blow - Screaming Laser Lead");
+        suitesMenu.addItem(51, "Beautiful Now - Euphoric Drop Chords");
+        suitesMenu.addItem(52, "Beautiful Now - Soaring Festival Lead");
+        suitesMenu.addItem(53, "Beautiful Now - Clockwork Bell Pluck");
+        suitesMenu.addItem(54, "Beautiful Now - Rolling Progressive Bass");
+        suitesMenu.addItem(55, "Right Round - Club Pulse Synth Stab");
+        suitesMenu.addItem(56, "Right Round - Dirty Electro Slap Bass");
+        suitesMenu.addItem(57, "Let It Rock - Overdriven Power-Saw Riff");
+        suitesMenu.addItem(58, "Let It Rock - Screaming Laser Lead");
+        suitesMenu.addItem(59, "Take It Off - Sharp Confetti Hook Pluck");
+        suitesMenu.addItem(60, "Take It Off - Festival Pumping Supersaws");
+        suitesMenu.addItem(61, "Clarity - Pure Complextro Saw Stack");
+        suitesMenu.addItem(62, "Die Young - Acoustic Pop Drop Lead");
+        suitesMenu.addItem(63, "Stay The Night - Stadium Laser Lead");
+        suitesMenu.addItem(64, "Album Master - Final Club Limiter FX");
+        menu.addSubMenu("09_Complete Track Suites", suitesMenu);
+
+        // User Presets
+        juce::File userDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                                .getChildFile("LeesHouse")
+                                .getChildFile("UserPresets");
+        if (userDir.exists() && userDir.isDirectory())
+        {
+            auto subDirs = userDir.findChildFiles(juce::File::findDirectories, false);
+            int userMenuId = 1000;
+            for (const auto& subDir : subDirs)
+            {
+                juce::PopupMenu subMenu;
+                auto files = subDir.findChildFiles(juce::File::findFiles, false, "*.kzpreset");
+                for (const auto& f : files)
+                {
+                    subMenu.addItem(userMenuId++, f.getFileNameWithoutExtension());
+                }
+                if (subMenu.getNumItems() > 0)
+                    menu.addSubMenu("User: " + subDir.getFileName(), subMenu);
+            }
+        }
+
+        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this),
+            [this](int result)
+            {
+                if (result == 0) return;
+                if (result >= 1 && result <= 84)
+                {
+                    if (onPresetSelected)
+                        onPresetSelected(result - 1);
+                }
+            });
+    }
+};
+
+// ==============================================================================
+// Main Plugin Audio Processor Editor
+// ==============================================================================
 class KeshaZeddSynthAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                           private juce::Timer
+                                          private juce::Timer
 {
 public:
     KeshaZeddSynthAudioProcessorEditor(KeshaZeddSynthAudioProcessor&);
@@ -592,44 +517,94 @@ private:
     void setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& text, 
                      juce::Slider::SliderStyle style = juce::Slider::RotaryHorizontalVerticalDrag);
     void setupComboBox(juce::ComboBox& box, juce::Label& label, const juce::String& text);
-    
     void showSavePresetDialog();
+    void updateModeVisibility();
 
     KeshaZeddSynthAudioProcessor& audioProcessor;
     ModernSynthLookAndFeel lookAndFeel;
 
-    // Header Controls
-    PresetComboBox presetBox;
+    // Dual-Mode State: false = PRODUCER MODE (Simple), true = ADVANCED SOUND DESIGNER
+    bool isAdvancedMode = false;
+
+    // ----------------------------------------------------
+    // HEADER BAR CONTROLS
+    // ----------------------------------------------------
+    juce::TextButton producerModeButton;
+    juce::TextButton advancedModeButton;
+
+    CustomPresetComboBox presetBox;
     juce::Label presetLabel;
     juce::TextButton prevPresetButton;
     juce::TextButton nextPresetButton;
-    juce::ToggleButton zeddifyButton;
-    juce::ComboBox zeddifyStyleBox;
+
+    juce::TextButton savePresetButton;
+    juce::TextButton loadPresetButton;
+    juce::TextButton diceButton;
     juce::TextButton mutateButton;
-    
+
+    juce::TextButton zeddifyButton;
+    juce::ComboBox zeddifyStyleBox;
+    juce::TextButton autoMasterButton;
+    juce::ComboBox themeBox;
+
+    juce::Slider masterVolSlider;
+    juce::Label masterVolLabel;
+    VUMeterComponent vuMeter;
+    juce::Label voiceCountLabel;
+
+    // Drag-and-drop MIDI Buttons
     DragMidiButton dragMidiButton;
     DragMidiButton dragChordButton;
     DragMidiButton dragHookButton;
     DragMidiButton dragVaultButton;
 
-    // Master Volume, Auto-Master & Theme
-    juce::Slider masterVolSlider;
-    juce::Label masterVolLabel;
-    juce::ToggleButton autoMasterButton;
-    juce::ComboBox themeBox;
-    VUMeterComponent vuMeter;
-    juce::Label voiceCountLabel;
+    // ----------------------------------------------------
+    // PRODUCER MODE (SIMPLE) COMPONENTS
+    // ----------------------------------------------------
+    juce::Slider beachPunchSlider;
+    juce::Label beachPunchLabel;
 
-    // Save, Load, and Dice buttons
-    juce::TextButton diceButton;
-    juce::TextButton savePresetButton;
-    juce::TextButton loadPresetButton;
+    juce::Slider festivalFilterSlider;
+    juce::Label festivalFilterLabel;
+
+    juce::Slider sidechainPumpSlider;
+    juce::Label sidechainPumpLabel;
+
+    juce::Slider spaceReverbSlider;
+    juce::Label spaceReverbLabel;
+
+    juce::Slider echoDelaySlider;
+    juce::Label echoDelayLabel;
+
+    juce::Slider stereoWideSlider;
+    juce::Label stereoWideLabel;
+
+    juce::Slider glossAirSlider;
+    juce::Label glossAirLabel;
+
+    juce::Slider warmthDriveSlider;
+    juce::Label warmthDriveLabel;
+
+    // Instant Festival Quick-FX Toggles
+    juce::ToggleButton phaserQuickToggle;
+    juce::ToggleButton glitterQuickToggle;
+    juce::ToggleButton trashQuickToggle;
+    juce::ToggleButton monoMakerQuickToggle;
+
+    // 4 Momentary Performance Trigger Pads
+    std::unique_ptr<MomentaryPadButton> tapeStopPad;
+    std::unique_ptr<MomentaryPadButton> stutterPad;
+    std::unique_ptr<MomentaryPadButton> divePad;
+    std::unique_ptr<MomentaryPadButton> reversePad;
 
     // ----------------------------------------------------
-    // SECTION 1: SOUND ENGINE & HYBRID LAYER (Left Bay)
+    // ADVANCED SOUND DESIGNER MODE COMPONENTS
     // ----------------------------------------------------
+    // Bay 1: Oscillators & Voice
     juce::Slider osc1ShapeSlider;
     juce::Label osc1ShapeLabel;
+    juce::ComboBox osc1OctaveBox;
+    juce::Label osc1OctaveLabel;
     juce::Slider unisonDetuneSlider;
     juce::Label unisonDetuneLabel;
     juce::Slider subLevelSlider;
@@ -638,22 +613,15 @@ private:
     juce::Label filterCutoffLabel;
     juce::Slider filterResSlider;
     juce::Label filterResLabel;
-    juce::Slider layerBMixSlider;
-    juce::Label layerBMixLabel;
-
-    juce::ComboBox osc1OctaveBox;
-    juce::Label osc1OctaveLabel;
     juce::ComboBox filterModeBox;
     juce::Label filterModeLabel;
     juce::ComboBox layerBTypeBox;
     juce::Label layerBTypeLabel;
+    juce::Slider layerBMixSlider;
+    juce::Label layerBMixLabel;
 
-    // ----------------------------------------------------
-    // SECTION 2: FL STUDIO AHDSR ENVELOPE & ECHO/FAT MODE (Center Bay)
-    // ----------------------------------------------------
+    // Interactive FL 6-Stage Envelope
     FLEnvelopeDisplayComponent envDisplay;
-
-    // AHDSR + Tension Controls
     juce::Slider envDelaySlider;
     juce::Label envDelayLabel;
     juce::Slider ampAttackSlider;
@@ -666,13 +634,12 @@ private:
     juce::Label ampSustainLabel;
     juce::Slider ampReleaseSlider;
     juce::Label ampReleaseLabel;
-
     juce::Slider envDecTensionSlider;
     juce::Label envDecTensionLabel;
     juce::Slider envRelTensionSlider;
     juce::Label envRelTensionLabel;
 
-    // FL Studio Echo Delay & Fat Mode
+    // Bay 2: Performance, Pitch, Echo Suite
     juce::Slider echoFeedSlider;
     juce::Label echoFeedLabel;
     juce::Slider echoTimeSlider;
@@ -686,7 +653,6 @@ private:
     juce::ToggleButton echoPingPongToggle;
     juce::ToggleButton echoFatToggle;
 
-    // FL Studio Time Shift, Gate, Cut Self & Slide
     juce::Slider timeShiftSlider;
     juce::Label timeShiftLabel;
     juce::ToggleButton cutSelfToggle;
@@ -694,7 +660,6 @@ private:
     juce::Slider glideTimeSlider;
     juce::Label glideTimeLabel;
 
-    // Songwriting Dropdowns
     juce::ComboBox chordProgBox;
     juce::Label chordProgLabel;
     juce::ComboBox harmonizerBox;
@@ -702,21 +667,13 @@ private:
     juce::ComboBox autoBassBox;
     juce::Label autoBassLabel;
 
-    // Hook Generator & MIDI Vault Controls
     juce::ToggleButton hookGenToggle;
     juce::ComboBox hookMoodBox;
     juce::TextButton generateHookButton;
     juce::ComboBox midiVaultBox;
     juce::Label midiVaultLabel;
-
     juce::ToggleButton easyKeyToggle;
     juce::ToggleButton counterMelodyToggle;
-
-    // 4 Momentary Glitch Trigger Pads
-    std::unique_ptr<MomentaryPadButton> tapeStopPad;
-    std::unique_ptr<MomentaryPadButton> stutterPad;
-    std::unique_ptr<MomentaryPadButton> divePad;
-    std::unique_ptr<MomentaryPadButton> reversePad;
 
     juce::Slider macroDropSlider;
     juce::Label macroDropLabel;
@@ -724,15 +681,21 @@ private:
     juce::Label punchLabel;
     juce::Slider humanizeSlider;
     juce::Label humanizeLabel;
-
     juce::ComboBox scaleRootBox;
     juce::Label scaleRootLabel;
     juce::ComboBox scaleTypeBox;
     juce::Label scaleTypeLabel;
 
-    // ----------------------------------------------------
-    // SECTION 3: EFFECTS, SPACE & GLITTER CLOUD (Right Bay)
-    // ----------------------------------------------------
+    // Bay 3: Detailed Effects & Full Phaser Controls
+    juce::Slider phaserRateSlider;
+    juce::Label phaserRateLabel;
+    juce::Slider phaserDepthSlider;
+    juce::Label phaserDepthLabel;
+    juce::Slider phaserFeedbackSlider;
+    juce::Label phaserFeedbackLabel;
+    juce::Slider phaserMixSlider;
+    juce::Label phaserMixLabel;
+
     juce::Slider fxDriveSlider;
     juce::Label fxDriveLabel;
     juce::Slider fxChorusMixSlider;
@@ -747,7 +710,6 @@ private:
     juce::Label fxReverbMixLabel;
     juce::Slider analogDriftSlider;
     juce::Label analogDriftLabel;
-
     juce::Slider glitterMixSlider;
     juce::Label glitterMixLabel;
     juce::Slider glitterGrainSlider;
@@ -761,7 +723,9 @@ private:
     juce::ToggleButton pumpToggle;
     juce::ToggleButton monoMakerToggle;
 
-    // Parameter Attachments
+    // ----------------------------------------------------
+    // PARAMETER ATTACHMENTS
+    // ----------------------------------------------------
     std::unique_ptr<ComboBoxAttachment> presetAttachment;
     std::unique_ptr<SliderAttachment> masterVolAttachment;
     std::unique_ptr<ButtonAttachment> zeddifyAttachment;
@@ -771,6 +735,20 @@ private:
     std::unique_ptr<ComboBoxAttachment> producerFlavorAttachment;
     std::unique_ptr<SliderAttachment> producerFlavorIntensityAttachment;
 
+    // Simple Mode Attachments
+    std::unique_ptr<SliderAttachment> beachPunchAttachment;
+    std::unique_ptr<SliderAttachment> festivalFilterAttachment;
+    std::unique_ptr<SliderAttachment> sidechainPumpAttachment;
+    std::unique_ptr<SliderAttachment> spaceReverbAttachment;
+    std::unique_ptr<SliderAttachment> echoDelayAttachment;
+    std::unique_ptr<SliderAttachment> stereoWideAttachment;
+    std::unique_ptr<SliderAttachment> glossAirAttachment;
+    std::unique_ptr<SliderAttachment> warmthDriveAttachment;
+
+    std::unique_ptr<ButtonAttachment> phaserQuickAttachment;
+    std::unique_ptr<ButtonAttachment> monoMakerQuickAttachment;
+
+    // Advanced Mode Attachments
     std::unique_ptr<SliderAttachment> osc1ShapeAttachment;
     std::unique_ptr<ComboBoxAttachment> osc1OctaveAttachment;
     std::unique_ptr<SliderAttachment> unisonDetuneAttachment;
@@ -800,8 +778,8 @@ private:
 
     std::unique_ptr<SliderAttachment> timeShiftAttachment;
     std::unique_ptr<ButtonAttachment> cutSelfAttachment;
-
     std::unique_ptr<SliderAttachment> glideTimeAttachment;
+
     std::unique_ptr<ComboBoxAttachment> chordProgAttachment;
     std::unique_ptr<ComboBoxAttachment> harmonizerAttachment;
     std::unique_ptr<ComboBoxAttachment> autoBassAttachment;
@@ -815,6 +793,11 @@ private:
     std::unique_ptr<SliderAttachment> punchAttachment;
     std::unique_ptr<ComboBoxAttachment> scaleRootAttachment;
     std::unique_ptr<ComboBoxAttachment> scaleTypeAttachment;
+
+    std::unique_ptr<SliderAttachment> phaserRateAttachment;
+    std::unique_ptr<SliderAttachment> phaserDepthAttachment;
+    std::unique_ptr<SliderAttachment> phaserFeedbackAttachment;
+    std::unique_ptr<SliderAttachment> phaserMixAttachment;
 
     std::unique_ptr<SliderAttachment> fxDriveAttachment;
     std::unique_ptr<SliderAttachment> fxChorusMixAttachment;
